@@ -6,11 +6,13 @@ final weatherRepositoryProvider = Provider((ref) => WeatherRepository(Dio()));
 
 class WeatherRepository {
   final Dio _dio;
-  
+
   // Base URLs
   static const String _baseUrl = 'https://api.open-meteo.com/v1/forecast';
-  static const String _airQualityUrl = 'https://air-quality-api.open-meteo.com/v1/air-quality';
-  static const String _geocodingUrl = 'https://geocoding-api.open-meteo.com/v1/search';
+  static const String _airQualityUrl =
+      'https://air-quality-api.open-meteo.com/v1/air-quality';
+  static const String _geocodingUrl =
+      'https://geocoding-api.open-meteo.com/v1/search';
 
   WeatherRepository(this._dio);
 
@@ -19,7 +21,7 @@ class WeatherRepository {
   // ===========================================================================
 
   /// Searches for cities by name using Open-Meteo Geocoding API.
-  /// 
+  ///
   /// Returns a list of matches.
   Future<List<Map<String, dynamic>>> searchCity(String query) async {
     // 1. Validation: Don't spam API with single letters
@@ -30,10 +32,10 @@ class WeatherRepository {
         _geocodingUrl,
         queryParameters: {
           'name': query,
-          'count': 10,       // Limit to top 10 results
-          'language': 'en',  // Prefer English names
+          'count': 10, // Limit to top 10 results
+          'language': 'en', // Prefer English names
           'format': 'json',
-          'timezone' : 'auto',
+          'timezone': 'auto',
         },
       );
 
@@ -46,7 +48,6 @@ class WeatherRepository {
       // 3. Casting: Convert dynamic list to strongly typed Map list
       final List<dynamic> results = data['results'];
       return results.cast<Map<String, dynamic>>();
-      
     } catch (e) {
       // In production, log this error to Sentry/Firebase
       print('Geocoding Error: $e');
@@ -59,7 +60,7 @@ class WeatherRepository {
   // ===========================================================================
 
   /// Fetches comprehensive weather data with maximum granularity.
-  /// 
+  ///
   /// [lat] Latitude of the location.
   /// [long] Longitude of the location.
   /// [tempUnit] 'celsius' or 'fahrenheit'.
@@ -103,20 +104,20 @@ class WeatherRepository {
         'temperature_unit': tempUnit,
         'wind_speed_unit': speedUnit,
         'timezone': 'auto', // Critical for correct daily aggregations
-        
+
         // --- 1. Current Conditions (Real-time) ---
         'current': [
           'temperature_2m',
           'relative_humidity_2m',
           'apparent_temperature', // "Feels Like"
-          'is_day',               // Boolean for UI theme (dark/light mode)
+          'is_day', // Boolean for UI theme (dark/light mode)
           'precipitation',
           'rain',
           'showers',
           'snowfall',
           'weather_code',
           'cloud_cover',
-          'pressure_msl',         // Mean Sea Level Pressure (Barometer)
+          'pressure_msl', // Mean Sea Level Pressure (Barometer)
           'surface_pressure',
           'wind_speed_10m',
           'wind_direction_10m',
@@ -131,7 +132,7 @@ class WeatherRepository {
           'dew_point_2m',
           'apparent_temperature',
           'precipitation_probability', // % chance
-          'precipitation',             // mm volume
+          'precipitation', // mm volume
           'weather_code',
           'pressure_msl',
           'surface_pressure',
@@ -164,7 +165,7 @@ class WeatherRepository {
           'wind_gusts_10m_max',
           'wind_direction_10m_dominant',
         ].join(','),
-        
+
         'forecast_days': 14, // Extended outlook
       },
     );
@@ -199,7 +200,65 @@ class WeatherRepository {
       // If AQI fails, don't crash the whole app, just return null/empty
       // This ensures the main weather app works even if pollution data is unavailable
       print('Air Quality API Error: $e');
-      return {'current': {}}; 
+      return {'current': {}};
+    }
+  }
+
+  // ===========================================================================
+// 3. HISTORICAL WEATHER DATA
+// ===========================================================================
+
+  /// Fetches historical weather data for graphing.
+  ///
+  /// [lat] Latitude of the location.
+  /// [long] Longitude of the location.
+  /// [startDate] ISO format "YYYY-MM-DD"
+  /// [endDate] ISO format "YYYY-MM-DD"
+  Future<Map<String, dynamic>> fetchHistoricalWeather({
+    required double lat,
+    required double long,
+    required String startDate,
+    required String endDate,
+    String tempUnit = 'celsius',
+  }) async {
+    try {
+      final response = await _dio.get(
+        'https://archive-api.open-meteo.com/v1/archive',
+        queryParameters: {
+          'latitude': lat,
+          'longitude': long,
+          'start_date': startDate,
+          'end_date': endDate,
+          'temperature_unit': tempUnit,
+          'timezone': 'auto',
+
+          // Daily aggregations for cleaner graphs
+          'daily': [
+            'temperature_2m_max',
+            'temperature_2m_min',
+            'temperature_2m_mean',
+            'apparent_temperature_max',
+            'apparent_temperature_min',
+            'apparent_temperature_mean',
+            'precipitation_sum',
+            'rain_sum',
+            'snowfall_sum',
+            'precipitation_hours',
+            'wind_speed_10m_max',
+            'wind_gusts_10m_max',
+            'wind_direction_10m_dominant',
+            'shortwave_radiation_sum',
+            'et0_fao_evapotranspiration',
+            'weather_code',
+            'sunrise',
+            'sunset',
+            'sunshine_duration',
+          ].join(','),
+        },
+      );
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to fetch historical weather: $e');
     }
   }
 }

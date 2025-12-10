@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:weather/historical_weather_screen.dart';
 import 'package:weather_icons/weather_icons.dart';
 import 'package:intl/intl.dart';
 
@@ -33,10 +34,66 @@ class WeatherHomeScreen extends ConsumerWidget {
           icon: const Icon(Icons.search, color: Colors.white),
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-          )
+            color: const Color(0xFF1D1E33),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+              side: const BorderSide(color: Color(0xFF00D9FF), width: 2),
+            ),
+            offset: const Offset(0, 50),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'units',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, color: Color(0xFF00D9FF), size: 18),
+                    SizedBox(width: 12),
+                    Text(
+                      'CHANGE UNITS',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'graph',
+                child: Row(
+                  children: [
+                    Icon(Icons.show_chart, color: Color(0xFF00D9FF), size: 18),
+                    SizedBox(width: 12),
+                    Text(
+                      'VIEW HISTORICAL GRAPH',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'units') {
+                _showUnitsDialog(context, ref);
+              } else if (value == 'graph') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        HistoricalWeatherScreen(city: currentCity),
+                  ),
+                );
+              }
+            },
+          ),
         ],
       ),
       body: Stack(
@@ -157,154 +214,15 @@ class WeatherHomeScreen extends ConsumerWidget {
                         child: TechnicalWarningCard(message: warning)),
 
                   // === HOURLY ===
+                  // === HOURLY ===
                   SliverToBoxAdapter(
                     child: TechnicalCard(
                       title: "HOURLY FORECAST",
-                      child: SizedBox(
-                        height: 127,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: 24,
-                          separatorBuilder: (_, __) => Container(
-                            width: 1,
-                            margin: const EdgeInsets.symmetric(horizontal: 12),
-                            color: Colors.white10,
-                          ),
-                          itemBuilder: (context, index) {
-                            final times = hourly['time'] as List;
-                            final now = DateTime.parse(current['time']);
-                            final targetIndex = now.hour + index;
-
-                            if (targetIndex >= times.length)
-                              return const SizedBox();
-
-                            final time = DateTime.parse(times[targetIndex]);
-                            final hCode = hourly['weather_code'][targetIndex];
-                            final isDay = hourly['is_day'][targetIndex] == 1;
-                            final temp = hourly['temperature_2m'][targetIndex];
-
-                            final precipProb =
-                                (hourly['precipitation_probability']
-                                        [targetIndex] as num)
-                                    .toDouble();
-                            final windSpeed =
-                                hourly['wind_speed_10m'][targetIndex];
-                            final humidity =
-                                hourly['relative_humidity_2m'][targetIndex];
-                            final uv = hourly['uv_index'][targetIndex];
-                            final feelsLike =
-                                hourly['apparent_temperature'][targetIndex];
-
-                            String timeLabel = (index == 0)
-                                ? "NOW"
-                                : DateFormat('HH:mm').format(time);
-
-                            return InkWell(
-                              onTap: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  backgroundColor: const Color(0xFF0A0A0A),
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(0)),
-                                    side: BorderSide(
-                                        color: Color(0xFF00D9FF), width: 2),
-                                  ),
-                                  builder: (context) => Container(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "$timeLabel FORECAST",
-                                          style: const TextStyle(
-                                            color: Color(0xFF00D9FF),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 2,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          WeatherMapper.getDescription(hCode)
-                                              .toUpperCase(),
-                                          style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 12),
-                                        ),
-                                        const Divider(
-                                            color: Color(0xFF00D9FF),
-                                            height: 30),
-                                        TechnicalDataRow(
-                                          icon: Icons.thermostat,
-                                          label: "FEELS LIKE",
-                                          value: "${feelsLike.round()}°",
-                                        ),
-                                        TechnicalDataRow(
-                                          icon: Icons.water_drop,
-                                          label: "PRECIPITATION",
-                                          value: "${precipProb.round()}%",
-                                        ),
-                                        TechnicalDataRow(
-                                          icon: Icons.air,
-                                          label: "WIND SPEED",
-                                          value: "${windSpeed.round()} KM/H",
-                                        ),
-                                        TechnicalDataRow(
-                                          icon: Icons.opacity,
-                                          label: "HUMIDITY",
-                                          value: "${humidity.round()}%",
-                                        ),
-                                        TechnicalDataRow(
-                                          icon: Icons.wb_sunny,
-                                          label: "UV INDEX",
-                                          value: uv.toStringAsFixed(1),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: SizedBox(
-                                width: 60,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      timeLabel,
-                                      style: TextStyle(
-                                        color: index == 0
-                                            ? const Color(0xFF00D9FF)
-                                            : Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    BoxedIcon(
-                                      WeatherMapper.getIcon(hCode, isDay),
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "${temp.round()}°",
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w300,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                      child: HourlyForecastList(
+                        hourly: hourly,
+                        current: current,
+                        startHour: DateTime.parse(current['time']).hour,
+                        itemCount: 24,
                       ),
                     ),
                   ),
@@ -459,7 +377,45 @@ class WeatherHomeScreen extends ConsumerWidget {
                                   color: Colors.black26,
                                 ),
                                 child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // === HOURLY BREAKDOWN ===
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 3,
+                                          height: 12,
+                                          color: const Color(0xFF00D9FF),
+                                          margin:
+                                              const EdgeInsets.only(right: 8),
+                                        ),
+                                        const Text(
+                                          'HOURLY BREAKDOWN',
+                                          style: TextStyle(
+                                            color: Color(0xFF00D9FF),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    HourlyForecastList(
+                                      hourly: hourly,
+                                      current: current,
+                                      startHour: index *
+                                          24, // Simple! Day 0 = 0, Day 1 = 24, etc.
+                                      itemCount: 24,
+                                      height: 130,
+                                    ),
+
+                                    const SizedBox(height: 12),
+                                    const Divider(
+                                        color: Color(0xFF00D9FF), height: 1),
+                                    const SizedBox(height: 12),
+
+                                    // === DAILY SUMMARY ===
                                     _buildExpandedRow(
                                         Icons.wb_twilight,
                                         "SUNRISE / SUNSET",
@@ -468,7 +424,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                                     _buildExpandedRow(
                                         Icons.air,
                                         "MAX WIND SPEED",
-                                        "${windMax.round()} KM/H"),
+                                        "${windMax.round()} units"),
                                     const SizedBox(height: 6),
                                     _buildExpandedRow(
                                         Icons.thermostat,
@@ -574,7 +530,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                           TechnicalDataRow(
                             icon: Icons.air,
                             label: "WIND SPEED",
-                            value: "${current['wind_speed_10m'].round()} KM/H",
+                            value: "${current['wind_speed_10m'].round()} units",
                           ),
                           TechnicalDataRow(
                             icon: Icons.opacity,
@@ -613,7 +569,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                             icon: Icons.air,
                             label: "MAX WIND",
                             value:
-                                "${daily['wind_speed_10m_max'][0].round()} KM/H",
+                                "${daily['wind_speed_10m_max'][0].round()} units",
                           ),
                           TechnicalDataRow(
                             icon: Icons.wb_sunny,
@@ -629,6 +585,140 @@ class WeatherHomeScreen extends ConsumerWidget {
                 ],
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUnitsDialog(BuildContext context, WidgetRef ref) {
+    final currentTempUnit = ref.read(temperatureUnitProvider);
+    final currentSpeedUnit = ref.read(speedUnitProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1D1E33),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0),
+          side: const BorderSide(color: Color(0xFF00D9FF), width: 2),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              color: const Color(0xFF00D9FF),
+              margin: const EdgeInsets.only(right: 12),
+            ),
+            const Text(
+              'UNIT PREFERENCES',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Temperature Unit
+            const Text(
+              'TEMPERATURE',
+              style: TextStyle(
+                color: Color(0xFF00D9FF),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...TemperatureUnit.values.map((unit) {
+              return RadioListTile<TemperatureUnit>(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                activeColor: const Color(0xFF00D9FF),
+                title: Text(
+                  '${unit.label} (${unit.symbol})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                value: unit,
+                groupValue: currentTempUnit,
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(temperatureUnitProvider.notifier).state = value;
+                  }
+                },
+              );
+            }),
+
+            const SizedBox(height: 20),
+            const Divider(color: Color(0xFF00D9FF), height: 1),
+            const SizedBox(height: 20),
+
+            // Speed Unit
+            const Text(
+              'WIND SPEED',
+              style: TextStyle(
+                color: Color(0xFF00D9FF),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...SpeedUnit.values.map((unit) {
+              return RadioListTile<SpeedUnit>(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                activeColor: const Color(0xFF00D9FF),
+                title: Text(
+                  '${unit.label} (${unit.symbol})',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                value: unit,
+                groupValue: currentSpeedUnit,
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(speedUnitProvider.notifier).state = value;
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF00D9FF),
+              backgroundColor: Colors.black26,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0)),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'APPLY',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -662,6 +752,164 @@ class WeatherHomeScreen extends ConsumerWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 // TECHNICAL UI COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REUSABLE HOURLY FORECAST WIDGET
+// ═══════════════════════════════════════════════════════════════════════════
+
+class HourlyForecastList extends StatelessWidget {
+  final Map<String, dynamic> hourly;
+  final Map<String, dynamic> current;
+  final int startHour;
+  final int itemCount;
+  final double height;
+
+  const HourlyForecastList({
+    super.key,
+    required this.hourly,
+    required this.current,
+    this.startHour = 0,
+    this.itemCount = 24,
+    this.height = 127,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final times = hourly['time'] as List;
+
+    return SizedBox(
+      height: height,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: itemCount,
+        separatorBuilder: (_, __) => Container(
+          width: 1,
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          color: Colors.white10,
+        ),
+        itemBuilder: (context, index) {
+          final targetIndex = startHour + index;
+
+          if (targetIndex >= times.length) return const SizedBox();
+
+          final time = DateTime.parse(times[targetIndex]);
+          final hCode = hourly['weather_code'][targetIndex];
+          final isDay = hourly['is_day'][targetIndex] == 1;
+          final temp = hourly['temperature_2m'][targetIndex];
+
+          final precipProb =
+              (hourly['precipitation_probability'][targetIndex] as num)
+                  .toDouble();
+          final windSpeed = hourly['wind_speed_10m'][targetIndex];
+          final humidity = hourly['relative_humidity_2m'][targetIndex];
+          final uv = hourly['uv_index'][targetIndex];
+          final feelsLike = hourly['apparent_temperature'][targetIndex];
+
+          final now = DateTime.parse(current['time']);
+          final isNow =
+              (startHour == 0 && index == 0 && targetIndex == now.hour);
+          String timeLabel = isNow ? "NOW" : DateFormat('HH:mm').format(time);
+
+          return InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: const Color(0xFF0A0A0A),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(0)),
+                  side: BorderSide(color: Color(0xFF00D9FF), width: 2),
+                ),
+                builder: (context) => Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$timeLabel FORECAST",
+                        style: const TextStyle(
+                          color: Color(0xFF00D9FF),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        WeatherMapper.getDescription(hCode).toUpperCase(),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                      ),
+                      const Divider(color: Color(0xFF00D9FF), height: 30),
+                      TechnicalDataRow(
+                        icon: Icons.thermostat,
+                        label: "FEELS LIKE",
+                        value: "${feelsLike.round()}°",
+                      ),
+                      TechnicalDataRow(
+                        icon: Icons.water_drop,
+                        label: "PRECIPITATION",
+                        value: "${precipProb.round()}%",
+                      ),
+                      TechnicalDataRow(
+                        icon: Icons.air,
+                        label: "WIND SPEED",
+                        value: "${windSpeed.round()} units",
+                      ),
+                      TechnicalDataRow(
+                        icon: Icons.opacity,
+                        label: "HUMIDITY",
+                        value: "${humidity.round()}%",
+                      ),
+                      TechnicalDataRow(
+                        icon: Icons.wb_sunny,
+                        label: "UV INDEX",
+                        value: uv.toStringAsFixed(1),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: SizedBox(
+              width: 60,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    timeLabel,
+                    style: TextStyle(
+                      color: isNow ? const Color(0xFF00D9FF) : Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  BoxedIcon(
+                    WeatherMapper.getIcon(hCode, isDay),
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "${temp.round()}°",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 class TechnicalCard extends StatelessWidget {
   final String title;
@@ -1042,7 +1290,7 @@ class TechnicalWindCompass extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          "${speed.round()} KM/H",
+          "${speed.round()} units",
           style: const TextStyle(
             color: Colors.white,
             fontSize: 14,

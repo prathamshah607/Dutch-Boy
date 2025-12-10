@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:weather/weather_home_screen.dart';
 import 'riverpod_interface.dart';
 
 class CitySearchScreen extends ConsumerStatefulWidget {
@@ -115,8 +116,16 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.zero,
                   onTap: () {
+                    // Update the current city
                     ref.read(currentCityProvider.notifier).state = city;
-                    Navigator.pop(context);
+
+                    // Navigate to weather screen
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WeatherHomeScreen(),
+                      ),
+                    );
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -268,7 +277,8 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
     );
   }
 
-  Widget _buildDataPoint(String label, String value, {bool alignRight = false}) {
+  Widget _buildDataPoint(String label, String value,
+      {bool alignRight = false}) {
     return Column(
       crossAxisAlignment:
           alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -379,8 +389,7 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline,
-                color: Color(0xFFEF5350), size: 26),
+            const Icon(Icons.error_outline, color: Color(0xFFEF5350), size: 26),
             const SizedBox(height: 10),
             const Text(
               "Search failed",
