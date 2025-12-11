@@ -14,7 +14,6 @@ class WeatherMapper {
     }
   }
 
-  /// Returns a human-readable description of the weather.
   static String getDescription(int code) {
     switch (code) {
       case 0: return 'Clear Sky';
@@ -48,10 +47,6 @@ class WeatherMapper {
       default: return 'Unknown';
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // PRIVATE HELPERS
-  // ---------------------------------------------------------------------------
 
   static IconData _getDayIcon(int code) {
     switch (code) {

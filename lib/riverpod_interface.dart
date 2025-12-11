@@ -3,19 +3,15 @@ import 'package:weather/weather_mapper.dart';
 import 'data_calling.dart';
 import 'package:intl/intl.dart';
 
-// ===========================================================================
-// CITY MODEL
-// ===========================================================================
-
 class City {
   final String name;
   final double latitude;
   final double longitude;
   final String country;
   final String? admin1; // State/Region
-  final String? countryCode; // ISO code (e.g., "US")
+  final String? countryCode; // ISO code
   final double? elevation; // Meters above sea level (changed to double)
-  final String? timezone; // e.g., "America/New_York"
+  final String? timezone; // eg. America/New_York
   final int? population; // City population
 
   City({
@@ -45,10 +41,6 @@ class City {
   }
 }
 
-// ===========================================================================
-// PROVIDERS
-// ===========================================================================
-
 String buildWeatherLLMContext(Map<String, dynamic> data) {
   final current = data['current'] as Map<String, dynamic>;
   final daily = data['daily'] as Map<String, dynamic>;
@@ -56,7 +48,6 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
 
   final buf = StringBuffer();
 
-  // ========== CURRENT CONDITIONS ==========
   final nowTime = DateTime.parse(current['time']);
   final int wmoCode = current['weather_code'] as int;
   buf.writeln('=== CURRENT CONDITIONS ===');
@@ -72,7 +63,6 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
       '- Visibility: ${(hourly['visibility'][0] / 1000).round()} km, UV index ~${daily['uv_index_max'][0]}');
   buf.writeln();
 
-  // ========== HOURLY TABLE (NEXT 24 HOURS) ==========
   // This provides granular context for "Will it rain at 5 PM?"
   buf.writeln('=== HOURLY FORECAST (NEXT 24 HOURS) ===');
   buf.writeln('Format: Time | Temp | Feels Like | Rain Chance (Vol) | Wind');
@@ -85,7 +75,6 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
   final winds = List<num>.from(hourly['wind_speed_10m'] ?? []);
 
   if (times.isNotEmpty) {
-    // 1. Find the index for the current hour
     int startIdx = times.indexWhere((t) {
       final tDate = DateTime.parse(t);
       // Compare only up to the hour to match
@@ -97,7 +86,7 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
 
     if (startIdx < 0) startIdx = 0; // Fallback
 
-    // 2. Loop through the next 24 indices
+    // Loop through the next 24 indices
     final endIdx = (startIdx + 24).clamp(0, times.length);
 
     for (int i = startIdx; i < endIdx; i++) {
@@ -121,7 +110,6 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
   }
   buf.writeln();
 
-  // ========== 10-DAY DAILY SUMMARY ==========
   buf.writeln('=== 10-DAY FORECAST SUMMARY ===');
 
   final dTimes = List<String>.from(daily['time'] ?? []);
@@ -176,7 +164,6 @@ final currentCityProvider = StateProvider<City>((ref) {
   );
 });
 
-// City search provider (autocomplete)
 final citySearchProvider =
     FutureProvider.autoDispose.family<List<City>, String>((ref, query) async {
   final repo = ref.read(weatherRepositoryProvider);
@@ -184,7 +171,6 @@ final citySearchProvider =
   return results.map((json) => City.fromJson(json)).toList();
 });
 
-// Weather data provider (depends on currentCityProvider AND unit preferences)
 final weatherRequestProvider =
     FutureProvider<Map<String, dynamic>>((ref) async {
   final city = ref.watch(currentCityProvider);
@@ -199,10 +185,6 @@ final weatherRequestProvider =
     speedUnit: speedUnit.apiValue,
   );
 });
-
-// ===========================================================================
-// HISTORICAL WEATHER PROVIDERS
-// ===========================================================================
 
 // Duration selection provider
 enum HistoricalDuration {
@@ -221,7 +203,6 @@ final selectedDurationProvider = StateProvider<HistoricalDuration>((ref) {
   return HistoricalDuration.months3;
 });
 
-// Historical weather data provider
 // Historical weather data provider
 final historicalWeatherProvider =
     FutureProvider.family<Map<String, dynamic>, City>((ref, city) async {
@@ -243,10 +224,6 @@ final historicalWeatherProvider =
 String _formatDate(DateTime date) {
   return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
-
-// ===========================================================================
-// UNIT PREFERENCES
-// ===========================================================================
 
 enum TemperatureUnit {
   celsius('Celsius', '°C', 'celsius'),

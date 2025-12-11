@@ -116,10 +116,8 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.zero,
                   onTap: () {
-                    // Update the current city
                     ref.read(currentCityProvider.notifier).state = city;
 
-                    // Navigate to weather screen
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -314,9 +312,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
   }
 }
 
-// ===================================================================
-// Helper widgets (minimal, muted)
-// ===================================================================
+// Helper widgets
 
 class _CenteredStatus extends StatelessWidget {
   final IconData icon;

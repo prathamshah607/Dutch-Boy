@@ -19,19 +19,14 @@ class WeatherBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // =====================================================================
-        // LAYER 1: BASE SKY (Realistic, Mature Colors)
-        // =====================================================================
+        // BASE SKY (Realistic, Mature Colors)
         Container(
           decoration: BoxDecoration(
             gradient: _getBaseSkyGradient(),
           ),
         ),
 
-        // =====================================================================
-        // LAYER 2: ENVIRONMENTAL OVERLAYS
-        // =====================================================================
-        
+
         // A. Twilight / Golden Hour (Subdued, Atmospheric)
         if (_isGoldenHour())
           Container(
@@ -71,10 +66,6 @@ class WeatherBackground extends StatelessWidget {
             ),
           ),
 
-        // =====================================================================
-        // LAYER 3: PARTICLES
-        // =====================================================================
-        
         // Stars (Subtle, realistic)
         if (!isDay && !_isCloudy(code)) 
           const WeatherParticleOverlay(type: ParticleType.stars),
@@ -109,10 +100,6 @@ class WeatherBackground extends StatelessWidget {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // REALISTIC SKY GRADIENTS
-  // ---------------------------------------------------------------------------
-
   LinearGradient _getBaseSkyGradient() {
     if (!isDay) {
       // NIGHT: Deep, realistic night sky
@@ -127,7 +114,7 @@ class WeatherBackground extends StatelessWidget {
         stops: [0.0, 0.5, 1.0],
       );
     } else {
-      // DAY: Realistic overcast/clear sky (muted, not cartoonish)
+      // DAY: Realistic overcast/clear sky
       if (_isCloudy(code) || _isStormy()) {
         // Overcast day - grey, moody
         return const LinearGradient(
@@ -156,10 +143,6 @@ class WeatherBackground extends StatelessWidget {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // LOGIC HELPERS
-  // ---------------------------------------------------------------------------
-
   bool _isGoldenHour() {
     try {
       final DateTime remoteTime = DateTime.parse(currentTimeString);
@@ -182,10 +165,6 @@ class WeatherBackground extends StatelessWidget {
   bool _isRainy(int code) => (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
   bool _isSnowy(int code) => (code >= 71 && code <= 77) || (code >= 85 && code <= 86);
 }
-
-// -----------------------------------------------------------------------------
-// PARTICLE SYSTEM (More Realistic Colors)
-// -----------------------------------------------------------------------------
 
 enum ParticleType { rain, snow, stars }
 
@@ -328,9 +307,7 @@ class ParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
-// -----------------------------------------------------------------------------
 // REALISTIC CLOUDS
-// -----------------------------------------------------------------------------
 
 class CloudOverlay extends StatefulWidget {
   final bool isDark;

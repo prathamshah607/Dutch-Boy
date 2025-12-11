@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http; // Standard HTTP package
-import 'riverpod_interface.dart'; // for City
-import 'data_calling.dart'; // your WikipediaService & WeatherRepository
+import 'package:http/http.dart' as http;
+import 'riverpod_interface.dart';
+import 'data_calling.dart';
 
 class ClimateAssistantPage extends StatefulWidget {
   final City city;
@@ -32,7 +32,6 @@ class _ClimateAssistantPageState extends State<ClimateAssistantPage> {
   @override
   void initState() {
     super.initState();
-    // Using postFrameCallback to safely access context/providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadContext();
     });
@@ -41,10 +40,8 @@ class _ClimateAssistantPageState extends State<ClimateAssistantPage> {
   Future<void> _loadContext() async {
     setState(() => _loading = true);
     try {
-      // 1. Existing: Fetch Wikipedia
       final wikiFuture = _wikiService.getEnrichedContext(widget.city.name);
 
-      // 2. NEW: Fetch Historical Data (Last 12 months)
       final repo =
           ProviderScope.containerOf(context).read(weatherRepositoryProvider);
 
@@ -60,18 +57,14 @@ class _ClimateAssistantPageState extends State<ClimateAssistantPage> {
         tempUnit: 'celsius',
       );
 
-      // Run fetches in parallel
       final results = await Future.wait([wikiFuture, historyFuture]);
       final wikiContext = results[0] as String;
       final historyData = results[1] as Map<String, dynamic>;
 
-      // 3. Process the raw history into the monthly summary string
       final historyContext = buildMonthlyHistorySummary(historyData);
 
-      // 4. Existing: Process Current Weather
       final weatherContext = buildWeatherLLMContext(widget.weatherData);
 
-      // 5. Combine everything
       _contextCache = '''
 CITY: ${widget.city.name}, ${widget.city.country}
 LAT: ${widget.city.latitude}, LON: ${widget.city.longitude}
@@ -86,8 +79,6 @@ $wikiContext
 '''
           .trim();
 
-      // Debug print
-      // print(_contextCache);
     } catch (e) {
       _messages.add(_ChatMessage(
         role: 'assistant',
@@ -154,9 +145,6 @@ CONTEXT:
 $_contextCache
 ''';
 
-    // Build the messages list for context awareness (optional: include past messages)
-    // For this specific implementation, we are sending System + Current User Question
-    // to keep tokens low, but you can append `_messages` if you want multi-turn memory.
     final messagesPayload = [
       {'role': 'system', 'content': systemPrompt},
       {'role': 'user', 'content': userQuestion},
@@ -169,7 +157,7 @@ $_contextCache
         'Authorization': 'Bearer $_openAiApiKey',
       },
       body: jsonEncode({
-        'model': 'gpt-4o-mini', // Using the model you requested
+        'model': 'gpt-4o-mini', 
         'messages': messagesPayload,
         'temperature': 0.5,
         'max_tokens': 2000,
@@ -303,7 +291,7 @@ $_contextCache
 }
 
 class _ChatMessage {
-  final String role; // 'user' or 'assistant'
+  final String role;
   final String text;
 
   _ChatMessage({required this.role, required this.text});

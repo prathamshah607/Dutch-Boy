@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 class WikipediaService {
   static const baseUrl = 'https://en.wikipedia.org/w/api.php';
 
-  // Keywords we specifically want to capture for our Climate RAG
+  // Keywords to capture for the Climate RAG
   static const _relevantKeywords = {
     'geography',
     'climate',
@@ -24,7 +24,6 @@ class WikipediaService {
     'demographics', // Useful for population density context
   };
 
-  /// Returns a curated context string optimized for the LLM
   Future<String> getEnrichedContext(String cityName) async {
     try {
       final pageTitle = await findCityPage(cityName);
@@ -96,7 +95,6 @@ class WikipediaService {
 
       final match = headerRegex.firstMatch(line);
       if (match != null) {
-        // Save previous section
         if (buffer.isNotEmpty) {
           // Append to existing content if we've seen this section header before (merging subsections)
           final existing = sections[currentSection] ?? '';
@@ -106,7 +104,7 @@ class WikipediaService {
         }
 
         // Start new section
-        // We normalize the key to lowercase/underscore for easy matching later
+        // normalize the key to lowercase/underscore for easy matching later
         currentSection =
             match.group(2)!.toLowerCase().trim().replaceAll(' ', '_');
 
@@ -185,10 +183,6 @@ class WeatherRepository {
 
   WeatherRepository(this._dio);
 
-  // ===========================================================================
-  // 1. GEOCODING (CITY SEARCH)
-  // ===========================================================================
-
   /// Searches for cities by name using Open-Meteo Geocoding API.
   ///
   /// Returns a list of matches.
@@ -223,10 +217,6 @@ class WeatherRepository {
       return []; // Return empty list so UI simply shows "No results"
     }
   }
-
-  // ===========================================================================
-  // 2. WEATHER DATA FETCHING
-  // ===========================================================================
 
   /// Fetches comprehensive weather data with maximum granularity.
   ///
@@ -372,10 +362,6 @@ class WeatherRepository {
       return {'current': {}};
     }
   }
-
-  // ===========================================================================
-// 3. HISTORICAL WEATHER DATA
-// ===========================================================================
 
   /// Fetches historical weather data for graphing.
   ///
