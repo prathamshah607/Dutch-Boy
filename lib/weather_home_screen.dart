@@ -47,7 +47,7 @@ class WeatherHomeScreen extends ConsumerWidget {
               ),
               icon:
                   const Icon(Icons.thunderstorm_outlined, color: Colors.white),
-              label: Text("CLIMATE MODELLER",
+              label: Text("MODELLER",
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -349,196 +349,213 @@ class WeatherHomeScreen extends ConsumerWidget {
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             color: Colors.white10),
                         itemBuilder: (context, index) {
-                          final min = daily['temperature_2m_min'][index];
-                          final max = daily['temperature_2m_max'][index];
-                          final dCode = daily['weather_code'][index];
-                          final date = DateTime.parse(daily['time'][index]);
-                          String dayLabel = (index == 0)
-                              ? "NOW"
-                              : DateFormat('EEE').format(date).toUpperCase();
+  final min = daily['temperature_2m_min'][index];
+  final max = daily['temperature_2m_max'][index];
+  final dCode = daily['weather_code'][index];
+  final date = DateTime.parse(daily['time'][index]);
 
-                          final rainSum = daily['rain_sum'][index];
-                          final uvMax = daily['uv_index_max'][index];
-                          final windMax = daily['wind_speed_10m_max'][index];
-                          final sunrise = DateFormat('HH:mm')
-                              .format(DateTime.parse(daily['sunrise'][index]));
-                          final sunset = DateFormat('HH:mm')
-                              .format(DateTime.parse(daily['sunset'][index]));
+  final rainSum = daily['rain_sum'][index];
+  final uvMax = daily['uv_index_max'][index];
+  final windMax = daily['wind_speed_10m_max'][index];
+  final sunrise = DateFormat('HH:mm')
+      .format(DateTime.parse(daily['sunrise'][index]));
+  final sunset = DateFormat('HH:mm')
+      .format(DateTime.parse(daily['sunset'][index]));
 
-                          return ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            childrenPadding:
-                                const EdgeInsets.only(top: 8, bottom: 4),
-                            iconColor: const Color(0xFF00D9FF),
-                            collapsedIconColor: Colors.white54,
-                            title: Row(
-                              children: [
-                                SizedBox(
-                                  width: 45,
-                                  child: Text(
-                                    dayLabel,
-                                    style: TextStyle(
-                                      color: index == 0
-                                          ? const Color(0xFF00D9FF)
-                                          : Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                BoxedIcon(
-                                  WeatherMapper.getIcon(dCode, true),
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        WeatherMapper.getDescription(dCode)
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.5,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.water_drop,
-                                              size: 10, color: Colors.white54),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            "${rainSum}MM",
-                                            style: const TextStyle(
-                                                color: Colors.white54,
-                                                fontSize: 10),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Icon(Icons.wb_sunny,
-                                              size: 10, color: Colors.white54),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            "UV $uvMax",
-                                            style: const TextStyle(
-                                                color: Colors.white54,
-                                                fontSize: 10),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Row(
-                                  children: [
-                                    Text(
-                                      "${min.round()}°",
-                                      style: const TextStyle(
-                                        color: Color(0xFF4FC3F7),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w300,
-                                      ),
-                                    ),
-                                    Container(
-                                      width: 20,
-                                      height: 2,
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 8),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFF4FC3F7),
-                                            Color(0xFFFF6B6B)
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      "${max.round()}°",
-                                      style: const TextStyle(
-                                        color: Color(0xFFFF6B6B),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: const Color(0xFF00D9FF), width: 1),
-                                  color: Colors.black26,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 3,
-                                          height: 12,
-                                          color: const Color(0xFF00D9FF),
-                                          margin:
-                                              const EdgeInsets.only(right: 8),
-                                        ),
-                                        const Text(
-                                          'HOURLY BREAKDOWN',
-                                          style: TextStyle(
-                                            color: Color(0xFF00D9FF),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 1.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    HourlyForecastList(
-                                      hourly: hourly,
-                                      current: current,
-                                      startHour: index * 24,
-                                      itemCount: 24,
-                                      height: 130,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Divider(
-                                        color: Color(0xFF00D9FF), height: 1),
-                                    const SizedBox(height: 12),
-                                    _buildExpandedRow(
-                                        Icons.wb_twilight,
-                                        "SUNRISE / SUNSET",
-                                        "$sunrise / $sunset"),
-                                    const SizedBox(height: 6),
-                                    _buildExpandedRow(
-                                        Icons.air,
-                                        "MAX WIND SPEED",
-                                        "${windMax.round()} units"),
-                                    const SizedBox(height: 6),
-                                    _buildExpandedRow(
-                                        Icons.thermostat,
-                                        "TEMP RANGE",
-                                        "${min.round()}° - ${max.round()}°"),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+  String dayLabel = (index == 0)
+      ? "NOW"
+      : DateFormat('EEE').format(date).toUpperCase();
+
+  return ExpansionTile(
+    tilePadding: EdgeInsets.zero,
+    childrenPadding: const EdgeInsets.only(top: 8, bottom: 4),
+    iconColor: const Color(0xFF00D9FF),
+    collapsedIconColor: Colors.white54,
+
+    // =============================
+    //            TITLE ROW
+    // =============================
+    title: Row(
+      children: [
+        // DAY LABEL (fixed width)
+        SizedBox(
+          width: 45,
+          child: Text(
+            dayLabel,
+            style: TextStyle(
+              color:
+                  index == 0 ? const Color(0xFF00D9FF) : Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 8),
+
+        // ===== LEFT SECTION (FLEXIBLE) =====
+        Flexible(
+          child: Row(
+            children: [
+              BoxedIcon(
+                WeatherMapper.getIcon(dCode, true),
+                color: Colors.white,
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // DESCRIPTION TEXT (truncates when needed)
+                    Text(
+                      WeatherMapper.getDescription(dCode).toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // SMALL METRICS ROW (shrinks gracefully)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Row(
+                          children: [
+                            Icon(Icons.water_drop,
+                                size: 10, color: Colors.white54),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                "${rainSum}MM",
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Icon(Icons.wb_sunny,
+                                size: 10, color: Colors.white54),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                "UV $uvMax",
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // ===== RIGHT SECTION (ALWAYS VISIBLE) =====
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "${min.round()}° ",
+              style: const TextStyle(
+                color: Color(0xFF4FC3F7),
+                fontSize: 16,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+            Text(
+              " ${max.round()}°",
+              style: const TextStyle(
+                color: Color(0xFFFF6B6B),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+
+    // =============================
+    //         EXPANDED CONTENT
+    // =============================
+    children: [
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFF00D9FF), width: 1),
+          color: Colors.black26,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 3,
+                  height: 12,
+                  color: const Color(0xFF00D9FF),
+                  margin: const EdgeInsets.only(right: 8),
+                ),
+                const Text(
+                  'HOURLY BREAKDOWN',
+                  style: TextStyle(
+                    color: Color(0xFF00D9FF),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            HourlyForecastList(
+              hourly: hourly,
+              current: current,
+              startHour: index * 24,
+              itemCount: 24,
+              height: 130,
+            ),
+
+            const SizedBox(height: 12),
+            const Divider(color: Color(0xFF00D9FF), height: 1),
+            const SizedBox(height: 12),
+
+            _buildExpandedRow(Icons.wb_twilight, "SUNRISE / SUNSET",
+                "$sunrise / $sunset"),
+            const SizedBox(height: 6),
+            _buildExpandedRow(Icons.air, "MAX WIND SPEED",
+                "${windMax.round()} units"),
+            const SizedBox(height: 6),
+            _buildExpandedRow(Icons.thermostat, "TEMP RANGE",
+                "${min.round()}° - ${max.round()}°"),
+          ],
+        ),
+      ),
+    ],
+  );
+},
+
+                        ),
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 40)),
