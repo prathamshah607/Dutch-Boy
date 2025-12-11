@@ -1,5 +1,174 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+class WikipediaService {
+  static const baseUrl = 'https://en.wikipedia.org/w/api.php';
+
+  // Keywords we specifically want to capture for our Climate RAG
+  static const _relevantKeywords = {
+    'geography',
+    'climate',
+    'weather',
+    'topography',
+    'ecology',
+    'environment',
+    'geology',
+    'flora',
+    'fauna',
+    'agriculture',
+    'economy', // Often contains info about crops/farming
+    'landscape',
+    'demographics', // Useful for population density context
+  };
+
+  /// Returns a curated context string optimized for the LLM
+  Future<String> getEnrichedContext(String cityName) async {
+    try {
+      final pageTitle = await findCityPage(cityName);
+      if (pageTitle == null) throw Exception('City not found');
+
+      final wikitext = await _fetchWikiText(pageTitle);
+      final sections = _parseWikiText(wikitext);
+
+      final sb = StringBuffer();
+
+      // 1. Always include the Summary (Introduction)
+      if (sections.containsKey('summary')) {
+        sb.writeln('=== GENERAL OVERVIEW ===');
+        sb.writeln(sections['summary']);
+        sb.writeln();
+      }
+
+      // 2. Aggregate relevant sections
+      sections.forEach((title, content) {
+        if (title == 'summary') return; // Already handled
+
+        // Check if title contains any of our keywords
+        if (_relevantKeywords.any((k) => title.contains(k))) {
+          sb.writeln('=== ${title.toUpperCase().replaceAll('_', ' ')} ===');
+          sb.writeln(content);
+          sb.writeln();
+        }
+      });
+
+      final result = sb.toString().trim();
+      return result.isEmpty
+          ? "No detailed geographic context available."
+          : result;
+    } catch (e) {
+      print('Error getting context: $e');
+      return "Unable to retrieve context.";
+    }
+  }
+
+  Future<String> _fetchWikiText(String title) async {
+    final url = Uri.parse('$baseUrl?'
+        'action=parse&'
+        'page=${Uri.encodeComponent(title)}&'
+        'prop=wikitext&'
+        'format=json&'
+        'formatversion=2');
+
+    final response = await http.get(url);
+    if (response.statusCode != 200) throw Exception('Failed to load');
+
+    final data = jsonDecode(response.body);
+    return data['parse']['wikitext'] as String;
+  }
+
+  Map<String, String> _parseWikiText(String text) {
+    final sections = <String, String>{};
+    final lines = text.split('\n');
+
+    String currentSection = 'summary';
+    StringBuffer buffer = StringBuffer();
+
+    // Regex to match headers like "== Geography ==" or "=== Climate ==="
+    final headerRegex = RegExp(r'^(={2,})\s*(.*?)\s*\1$');
+
+    for (var line in lines) {
+      if (line.trim().isEmpty ||
+          line.startsWith('[[File:') ||
+          line.startsWith('{{')) continue;
+
+      final match = headerRegex.firstMatch(line);
+      if (match != null) {
+        // Save previous section
+        if (buffer.isNotEmpty) {
+          // Append to existing content if we've seen this section header before (merging subsections)
+          final existing = sections[currentSection] ?? '';
+          sections[currentSection] = existing +
+              (existing.isEmpty ? '' : '\n') +
+              _cleanWikiText(buffer.toString());
+        }
+
+        // Start new section
+        // We normalize the key to lowercase/underscore for easy matching later
+        currentSection =
+            match.group(2)!.toLowerCase().trim().replaceAll(' ', '_');
+
+        buffer.clear();
+      } else {
+        buffer.writeln(line);
+      }
+    }
+
+    // Save last section
+    if (buffer.isNotEmpty) {
+      final existing = sections[currentSection] ?? '';
+      sections[currentSection] = existing +
+          (existing.isEmpty ? '' : '\n') +
+          _cleanWikiText(buffer.toString());
+    }
+
+    return sections;
+  }
+
+  String _cleanWikiText(String text) {
+    var clean = text;
+    // Remove ref tags
+    clean = clean.replaceAll(
+        RegExp(r'<ref.*?>.*?</ref>',
+            caseSensitive: false, multiLine: true, dotAll: true),
+        '');
+    clean = clean.replaceAll(RegExp(r'<ref.*?/>', caseSensitive: false), '');
+
+    // Remove [[File:...]]
+    clean = clean.replaceAll(RegExp(r'\[\[File:.*?\]\]'), '');
+
+    // Replace [[Link|Text]] with Text
+    clean = clean.replaceAllMapped(RegExp(r'\[\[(?:[^|\]]*\|)?([^\]]+)\]\]'),
+        (match) {
+      return match.group(1) ?? '';
+    });
+
+    // Remove {{...}} templates
+    // We use a non-greedy match to try and catch simple templates
+    clean = clean.replaceAll(RegExp(r'\{\{.*?\}\}'), '');
+
+    // Remove formatting
+    clean = clean.replaceAll("'''", "").replaceAll("''", "");
+
+    // Clean up extra whitespace that results from removing tags
+    clean = clean.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+
+    return clean.trim();
+  }
+
+  Future<String?> findCityPage(String cityName) async {
+    final url = Uri.parse(
+        '$baseUrl?action=opensearch&search=${Uri.encodeComponent(cityName)}&limit=1&format=json');
+    final response = await http.get(url);
+    final data = jsonDecode(response.body) as List;
+    if (data.length > 1 && (data[1] as List).isNotEmpty) {
+      return (data[1] as List)[0] as String;
+    }
+    return null;
+  }
+}
 
 // Global provider for the repository
 final weatherRepositoryProvider = Provider((ref) => WeatherRepository(Dio()));
@@ -260,5 +429,73 @@ class WeatherRepository {
     } catch (e) {
       throw Exception('Failed to fetch historical weather: $e');
     }
+  }
+}
+
+// Place this outside your widget or in a utility file
+String buildMonthlyHistorySummary(Map<String, dynamic> historicalData) {
+  try {
+    final daily = historicalData['daily'] as Map<String, dynamic>;
+    final dates = List<String>.from(daily['time']);
+    final temps = List<num?>.from(daily['temperature_2m_mean']);
+    final appTemps = List<num?>.from(daily['apparent_temperature_mean']);
+    final precip = List<num?>.from(daily['precipitation_sum']);
+    final winds = List<num?>.from(daily['wind_speed_10m_max']);
+
+    // 1. Group indices by "Year-Month"
+    final Map<String, List<int>> monthBuckets = {};
+
+    for (int i = 0; i < dates.length; i++) {
+      // Extract "YYYY-MM"
+      final date = dates[i];
+      final key = date.substring(0, 7);
+      monthBuckets.putIfAbsent(key, () => []).add(i);
+    }
+
+    final sb = StringBuffer();
+    sb.writeln('=== LAST 12 MONTHS CLIMATOLOGY (HISTORICAL ACTUALS) ===');
+
+    // 2. Iterate buckets and calculate averages
+    // Sort keys to ensure chronological order
+    final sortedKeys = monthBuckets.keys.toList()..sort();
+
+    for (final key in sortedKeys) {
+      final indices = monthBuckets[key]!;
+
+      double sumTemp = 0;
+      double sumAppTemp = 0;
+      double totalPrecip = 0;
+      double sumWind = 0;
+      int count = 0;
+
+      for (final i in indices) {
+        if (temps[i] != null && appTemps[i] != null) {
+          sumTemp += temps[i]!;
+          sumAppTemp += appTemps[i]!;
+          totalPrecip += (precip[i] ?? 0);
+          sumWind += (winds[i] ?? 0);
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        final avgTemp = sumTemp / count;
+        final avgAppTemp = sumAppTemp / count;
+        final avgWind = sumWind / count; // Average daily max wind
+
+        // Convert "2024-01" to "Jan 2024" for readability
+        final dateObj = DateTime.parse('$key-01');
+        final monthName = DateFormat('MMM yyyy').format(dateObj);
+
+        sb.writeln('- $monthName: Avg Temp ${avgTemp.toStringAsFixed(1)}°C '
+            '(Feels ${avgAppTemp.toStringAsFixed(1)}°C), '
+            'Total Rain ${totalPrecip.toStringAsFixed(1)} mm, '
+            'Avg Max Wind ${avgWind.toStringAsFixed(1)} units');
+      }
+    }
+    return sb.toString();
+  } catch (e) {
+    print('Error calculating monthly history: $e');
+    return "Historical monthly summary unavailable.";
   }
 }

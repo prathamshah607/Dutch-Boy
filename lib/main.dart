@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:weather/city_search_screen.dart';
-import 'weather_home_screen.dart';
 
 void main() {
   // 1. Wrap the entire app in ProviderScope.

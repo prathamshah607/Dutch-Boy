@@ -1,7 +1,7 @@
 import 'dart:math';
+import 'package:fl_chart/fl_chart.dart'; // REQUIRED: Add fl_chart to pubspec.yaml
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:weather/historical_weather_screen.dart';
 import 'package:weather_icons/weather_icons.dart';
 import 'package:intl/intl.dart';
 
@@ -10,6 +10,8 @@ import 'riverpod_interface.dart';
 import 'weather_background.dart';
 import 'weather_mapper.dart';
 import 'city_search_screen.dart';
+import 'llm.dart';
+import 'historical_weather_screen.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
   const WeatherHomeScreen({super.key});
@@ -34,64 +36,59 @@ class WeatherHomeScreen extends ConsumerWidget {
           icon: const Icon(Icons.search, color: Colors.white),
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            color: const Color(0xFF1D1E33),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-              side: const BorderSide(color: Color(0xFF00D9FF), width: 2),
-            ),
-            offset: const Offset(0, 50),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'units',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings, color: Color(0xFF00D9FF), size: 18),
-                    SizedBox(width: 12),
-                    Text(
-                      'CHANGE UNITS',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
+          weatherAsync.when(
+            data: (data) => OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.white24),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              const PopupMenuItem(
-                value: 'graph',
-                child: Row(
-                  children: [
-                    Icon(Icons.show_chart, color: Color(0xFF00D9FF), size: 18),
-                    SizedBox(width: 12),
-                    Text(
-                      'VIEW HISTORICAL GRAPH',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'units') {
-                _showUnitsDialog(context, ref);
-              } else if (value == 'graph') {
+              icon:
+                  const Icon(Icons.thunderstorm_outlined, color: Colors.white),
+              label: Text("CLIMATE MODELLER",
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0)),
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        HistoricalWeatherScreen(city: currentCity),
+                    builder: (context) => ClimateAssistantPage(
+                      city: currentCity,
+                      weatherData: data,
+                    ),
                   ),
                 );
-              }
+              },
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+          // ... (Existing popup menu code) ...
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            color: const Color(0xFF1D1E33),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: 'units',
+                  child: Text('CHANGE UNITS',
+                      style: TextStyle(color: Colors.white))),
+              const PopupMenuItem(
+                  value: 'graph',
+                  child: Text('VIEW HISTORICAL GRAPH',
+                      style: TextStyle(color: Colors.white))),
+            ],
+            onSelected: (value) {
+              if (value == 'units') _showUnitsDialog(context, ref);
+              if (value == 'graph')
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            HistoricalWeatherScreen(city: currentCity)));
             },
           ),
         ],
@@ -118,10 +115,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                 child: CircularProgressIndicator(color: Color(0xFF00D9FF))),
             error: (err, stack) => Center(
                 child: Text('ERROR: $err',
-                    style: const TextStyle(
-                        color: Colors.red,
-                        fontFamily: 'monospace',
-                        fontSize: 12))),
+                    style: const TextStyle(color: Colors.red))),
             data: (data) {
               final current = data['current'];
               final daily = data['daily'];
@@ -131,8 +125,8 @@ class WeatherHomeScreen extends ConsumerWidget {
               final double aqiValue =
                   (aqiData?['us_aqi'] ?? aqiData?['european_aqi'] ?? 0)
                       .toDouble();
-
               final int code = current['weather_code'];
+
               String? warning;
               if (code >= 95)
                 warning = "THUNDERSTORM WARNING";
@@ -147,74 +141,182 @@ class WeatherHomeScreen extends ConsumerWidget {
                   // === HEADER ===
                   SliverToBoxAdapter(
                     child: Container(
-                      padding: const EdgeInsets.only(top: 100, bottom: 30),
+                      padding: const EdgeInsets.only(
+                          top: 100, bottom: 20, left: 24, right: 24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.0),
+                            Colors.black.withOpacity(0.7)
+                          ],
+                          stops: const [0.0, 0.9],
+                        ),
+                      ),
                       child: Column(
                         children: [
-                          Text(
-                            currentCity.name.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 3,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "${current['temperature_2m'].round()}°",
-                            style: const TextStyle(
-                              fontSize: 110,
-                              fontWeight: FontWeight.w100,
-                              color: Colors.white,
-                              height: 0.9,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            WeatherMapper.getDescription(
-                                    current['weather_code'])
-                                .toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(
-                                "H ${daily['temperature_2m_max'][0].round()}°",
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700),
+                              Expanded(
+                                flex: 6,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      currentCity.name.toUpperCase(),
+                                      style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 2,
+                                          color: Colors.white),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "${current['temperature_2m'].round()}°",
+                                      style: const TextStyle(
+                                          fontSize: 96,
+                                          fontWeight: FontWeight.w200,
+                                          color: Colors.white,
+                                          height: 1.0,
+                                          letterSpacing: -4),
+                                    ),
+                                    Text(
+                                      WeatherMapper.getDescription(
+                                              current['weather_code'])
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF00D9FF),
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 1.0),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Text(
+                                            "H ${daily['temperature_2m_max'][0].round()}°",
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white70)),
+                                        Container(
+                                            width: 2,
+                                            height: 12,
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 8),
+                                            color: Colors.white24),
+                                        Text(
+                                            "L ${daily['temperature_2m_min'][0].round()}°",
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white70)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Container(
-                                width: 2,
-                                height: 14,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                color: Colors.white30,
-                              ),
-                              Text(
-                                "L ${daily['temperature_2m_min'][0].round()}°",
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700),
+                              Expanded(
+                                flex: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.only(
+                                      left: 16, bottom: 8),
+                                  decoration: const BoxDecoration(
+                                      border: Border(
+                                          left: BorderSide(
+                                              color: Colors.white12,
+                                              width: 1))),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      _buildCompactStat("FEELS LIKE",
+                                          "${current['apparent_temperature'].round()}°"),
+                                      const SizedBox(height: 12),
+                                      _buildCompactStat("PRECIP",
+                                          "${current['precipitation']}MM"),
+                                      const SizedBox(height: 12),
+                                      _buildCompactStat("WIND",
+                                          "${current['wind_speed_10m'].round()}"),
+                                      const SizedBox(height: 12),
+                                      _buildCompactStat("HUMIDITY",
+                                          "${current['relative_humidity_2m']}%"),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 30),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF0A0A0A).withOpacity(0.8),
+                                border: Border.all(
+                                    color: Colors.white12, width: 1)),
+                            child: Column(
+                              children: [
+                                const Text("ENVIRONMENTAL TELEMETRY",
+                                    style: TextStyle(
+                                        color: Color(0xFF00D9FF),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 2)),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                        child: Column(children: [
+                                      BoxedIcon(
+                                          WeatherMapper.getIcon(
+                                              current['weather_code'],
+                                              current['is_day'] == 1),
+                                          size: 20,
+                                          color: Colors.white),
+                                      const SizedBox(height: 6),
+                                      const Text("VISUAL",
+                                          style: TextStyle(
+                                              color: Colors.white38,
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700))
+                                    ])),
+                                    Expanded(
+                                        child: _CondensedAQI(aqi: aqiValue)),
+                                    Expanded(
+                                        child: _CondensedSun(
+                                            sunrise: DateTime.parse(
+                                                daily['sunrise'][0]),
+                                            sunset: DateTime.parse(
+                                                daily['sunset'][0]),
+                                            now: DateTime.parse(
+                                                current['time']))),
+                                    Expanded(
+                                        child: _CondensedWind(
+                                            dir: (current['wind_direction_10m']
+                                                    as num)
+                                                .toDouble(),
+                                            speed: (current['wind_speed_10m']
+                                                    as num)
+                                                .toDouble())),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
 
-                  // === WARNING ===
                   if (warning != null)
                     SliverToBoxAdapter(
                         child: TechnicalWarningCard(message: warning)),
 
-                  // === HOURLY ===
-                  // === HOURLY ===
+                  // === HOURLY LIST ===
                   SliverToBoxAdapter(
                     child: TechnicalCard(
                       title: "HOURLY FORECAST",
@@ -227,7 +329,13 @@ class WeatherHomeScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // === DAILY ===
+                  // === NEW: 24H CHARTS ===
+                  SliverToBoxAdapter(
+                    child:
+                        _HourlyChartsSection(hourly: hourly, current: current),
+                  ),
+
+                  // === DAILY LIST ===
                   SliverToBoxAdapter(
                     child: TechnicalCard(
                       title: "10-DAY FORECAST",
@@ -237,10 +345,9 @@ class WeatherHomeScreen extends ConsumerWidget {
                         padding: EdgeInsets.zero,
                         itemCount: 10,
                         separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          color: Colors.white10,
-                        ),
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            color: Colors.white10),
                         itemBuilder: (context, index) {
                           final min = daily['temperature_2m_min'][index];
                           final max = daily['temperature_2m_max'][index];
@@ -379,7 +486,6 @@ class WeatherHomeScreen extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // === HOURLY BREAKDOWN ===
                                     Row(
                                       children: [
                                         Container(
@@ -404,18 +510,14 @@ class WeatherHomeScreen extends ConsumerWidget {
                                     HourlyForecastList(
                                       hourly: hourly,
                                       current: current,
-                                      startHour: index *
-                                          24, // Simple! Day 0 = 0, Day 1 = 24, etc.
+                                      startHour: index * 24,
                                       itemCount: 24,
                                       height: 130,
                                     ),
-
                                     const SizedBox(height: 12),
                                     const Divider(
                                         color: Color(0xFF00D9FF), height: 1),
                                     const SizedBox(height: 12),
-
-                                    // === DAILY SUMMARY ===
                                     _buildExpandedRow(
                                         Icons.wb_twilight,
                                         "SUNRISE / SUNSET",
@@ -439,148 +541,6 @@ class WeatherHomeScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-
-                  // === STATS GRID ===
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid.count(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.2,
-                      children: [
-                        // CONDITION
-                        TechnicalDataCard(
-                          label: "CONDITION",
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              BoxedIcon(
-                                WeatherMapper.getIcon(current['weather_code'],
-                                    current['is_day'] == 1),
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                WeatherMapper.getDescription(
-                                        current['weather_code'])
-                                    .toUpperCase(),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                  height: 1.3,
-                                ),
-                                maxLines: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // AQI
-                        TechnicalDataCard(
-                          label: "AIR QUALITY",
-                          child: TechnicalAQIGauge(aqi: aqiValue),
-                        ),
-
-                        // SUN
-                        TechnicalDataCard(
-                          label: "SOLAR",
-                          child: TechnicalSunPath(
-                            sunrise: DateTime.parse(daily['sunrise'][0]),
-                            sunset: DateTime.parse(daily['sunset'][0]),
-                            currentTime: DateTime.parse(current['time']),
-                          ),
-                        ),
-
-                        // WIND
-                        TechnicalDataCard(
-                          label: "WIND",
-                          child: TechnicalWindCompass(
-                            direction: (current['wind_direction_10m'] as num)
-                                .toDouble(),
-                            speed:
-                                (current['wind_speed_10m'] as num).toDouble(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // === NOW STATS ===
-                  SliverToBoxAdapter(
-                    child: TechnicalCard(
-                      title: "CURRENT CONDITIONS",
-                      child: Column(
-                        children: [
-                          TechnicalDataRow(
-                            icon: Icons.thermostat,
-                            label: "FEELS LIKE",
-                            value:
-                                "${current['apparent_temperature'].round()}°",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.water_drop,
-                            label: "PRECIPITATION",
-                            value: "${current['precipitation']}MM",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.air,
-                            label: "WIND SPEED",
-                            value: "${current['wind_speed_10m'].round()} units",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.opacity,
-                            label: "HUMIDITY",
-                            value: "${current['relative_humidity_2m']}%",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.visibility,
-                            label: "VISIBILITY",
-                            value:
-                                "${(hourly['visibility'][0] / 1000).round()} KM",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // === TODAY OVERVIEW ===
-                  SliverToBoxAdapter(
-                    child: TechnicalCard(
-                      title: "TODAY'S OVERVIEW",
-                      child: Column(
-                        children: [
-                          TechnicalDataRow(
-                            icon: Icons.wb_twilight,
-                            label: "SUNRISE / SUNSET",
-                            value:
-                                "${DateFormat('HH:mm').format(DateTime.parse(daily['sunrise'][0]))} / ${DateFormat('HH:mm').format(DateTime.parse(daily['sunset'][0]))}",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.water_drop,
-                            label: "TOTAL RAIN",
-                            value: "${daily['rain_sum'][0]}MM",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.air,
-                            label: "MAX WIND",
-                            value:
-                                "${daily['wind_speed_10m_max'][0].round()} units",
-                          ),
-                          TechnicalDataRow(
-                            icon: Icons.wb_sunny,
-                            label: "MAX UV INDEX",
-                            value: "${daily['uv_index_max'][0]}",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 40)),
                 ],
               );
@@ -588,6 +548,44 @@ class WeatherHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // ... (Keep existing helpers like _buildCompactStat, _buildExpandedRow, _showUnitsDialog) ...
+  Widget _buildCompactStat(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: Color(0xFF00D9FF),
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5)),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildExpandedRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF00D9FF), size: 14),
+        const SizedBox(width: 8),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 10, letterSpacing: 0.5)),
+        const Spacer(),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ],
     );
   }
 
@@ -626,7 +624,7 @@ class WeatherHomeScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Temperature Unit
+            // Temperature Unit Section
             const Text(
               'TEMPERATURE',
               style: TextStyle(
@@ -655,6 +653,8 @@ class WeatherHomeScreen extends ConsumerWidget {
                 onChanged: (value) {
                   if (value != null) {
                     ref.read(temperatureUnitProvider.notifier).state = value;
+                    Navigator.pop(
+                        context); // Close dialog immediately on selection
                   }
                 },
               );
@@ -664,7 +664,7 @@ class WeatherHomeScreen extends ConsumerWidget {
             const Divider(color: Color(0xFF00D9FF), height: 1),
             const SizedBox(height: 20),
 
-            // Speed Unit
+            // Speed Unit Section
             const Text(
               'WIND SPEED',
               style: TextStyle(
@@ -693,6 +693,7 @@ class WeatherHomeScreen extends ConsumerWidget {
                 onChanged: (value) {
                   if (value != null) {
                     ref.read(speedUnitProvider.notifier).state = value;
+                    Navigator.pop(context);
                   }
                 },
               );
@@ -704,46 +705,319 @@ class WeatherHomeScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF00D9FF),
-              backgroundColor: Colors.black26,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(0)),
             ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'APPLY',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
+            child: const Text('CLOSE',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildExpandedRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: const Color(0xFF00D9FF), size: 14),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(
-              color: Colors.white70, fontSize: 10, letterSpacing: 0.5),
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW: HOURLY CHARTS SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _HourlyChartsSection extends StatelessWidget {
+  final Map<String, dynamic> hourly;
+  final Map<String, dynamic> current;
+
+  const _HourlyChartsSection({required this.hourly, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    final times = List<String>.from(hourly['time']);
+    // Find current index
+    final now = DateTime.parse(current['time']);
+    int startIdx = times.indexWhere((t) {
+      final tDate = DateTime.parse(t);
+      return tDate.year == now.year &&
+          tDate.month == now.month &&
+          tDate.day == now.day &&
+          tDate.hour == now.hour;
+    });
+    if (startIdx < 0) startIdx = 0;
+
+    // Get next 24 hours of data
+    final range = 24;
+    final endIdx = (startIdx + range).clamp(0, times.length);
+
+    // Prepare Data for Charts
+    final timeLabels = <String>[];
+    final temps = <FlSpot>[];
+    final appTemps = <FlSpot>[];
+    final precip = <BarChartGroupData>[];
+
+    for (int i = 0; i < (endIdx - startIdx); i++) {
+      int idx = startIdx + i;
+      final tStr = times[idx];
+      final timeObj = DateTime.parse(tStr);
+      timeLabels.add(DateFormat('HH:mm').format(timeObj));
+
+      // Temperature Lines
+      final tVal = (hourly['temperature_2m'][idx] as num).toDouble();
+      final aVal = (hourly['apparent_temperature'][idx] as num).toDouble();
+      temps.add(FlSpot(i.toDouble(), tVal));
+      appTemps.add(FlSpot(i.toDouble(), aVal));
+
+      // Precip Bars
+      final pVal = (hourly['precipitation'][idx] as num).toDouble();
+      precip.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: pVal,
+              color: const Color(0xFF00D9FF),
+              width: 6,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(2)),
+            ),
+          ],
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+      );
+    }
+
+    if (timeLabels.isEmpty) return const SizedBox();
+
+    return Column(
+      children: [
+        // 1. TEMPERATURE CHART
+        TechnicalCard(
+          title: "24H TEMPERATURE TREND (°C)",
+          child: SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: Colors.white10, strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 4, // Show label every 4 hours
+                      getTitlesWidget: (val, meta) {
+                        int index = val.toInt();
+                        if (index >= 0 && index < timeLabels.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(timeLabels[index],
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 10)),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+                  ),
+                  leftTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (val, meta) => Text("${val.toInt()}°",
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 10)),
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  // Actual Temp
+                  LineChartBarData(
+                    spots: temps,
+                    isCurved: true,
+                    color: const Color(0xFFFF6B6B),
+                    barWidth: 3,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFFFF6B6B).withOpacity(0.1)),
+                  ),
+                  // Apparent Temp (Dashed-ish look via simpler color)
+                  LineChartBarData(
+                    spots: appTemps,
+                    isCurved: true,
+                    color: const Color(0xFFFFAA00),
+                    barWidth: 2,
+                    dashArray: [5, 5], // Dashed line
+                    dotData: FlDotData(show: false),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+        TechnicalCard(
+          title: "24H RAINFALL (MM)",
+          child: SizedBox(
+            height: 150,
+            child: BarChart(
+              BarChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: Colors.white10, strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      // Do NOT rely on interval here for BarChart
+                      getTitlesWidget: (val, meta) {
+                        final index = val.toInt();
+
+                        // Safety check: valid index
+                        if (index < 0 || index >= timeLabels.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        // Show only every 4th hour
+                        if (index % 4 != 0) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            timeLabels[index],
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      },
+                      reservedSize: 24,
+                    ),
+                  ),
+                  leftTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (val, meta) {
+                        if (val == 0) return const SizedBox.shrink();
+                        return Text(
+                          val.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: precip,
+              ),
+            ),
+          ),
+        )
+      ],
+    );
+  }
+}
+
+// === EXISTING CONDENSED WIDGETS ===
+// (Keep _CondensedAQI, _CondensedSun, _CondensedWind, TechnicalCard, etc.)
+// ... (Paste your existing Condensed widgets here) ...
+// === CONDENSED WIDGETS ===
+
+class _CondensedAQI extends StatelessWidget {
+  final double aqi;
+  const _CondensedAQI({required this.aqi});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color = aqi > 100
+        ? Colors.red
+        : aqi > 50
+            ? Colors.orange
+            : Colors.green;
+    return Column(
+      children: [
+        Text("${aqi.round()}",
+            style: TextStyle(
+                color: color, fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        const Text("AQI",
+            style: TextStyle(
+                color: Colors.white38,
+                fontSize: 8,
+                fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+class _CondensedSun extends StatelessWidget {
+  final DateTime sunrise;
+  final DateTime sunset;
+  final DateTime now;
+  const _CondensedSun(
+      {required this.sunrise, required this.sunset, required this.now});
+
+  @override
+  Widget build(BuildContext context) {
+    int total = sunset.difference(sunrise).inMinutes;
+    int passed = now.difference(sunrise).inMinutes;
+    double pct = (total == 0) ? 0 : (passed / total).clamp(0.0, 1.0);
+    if (now.isBefore(sunrise)) pct = 0;
+    if (now.isAfter(sunset)) pct = 1;
+
+    return Column(
+      children: [
+        SizedBox(
+          width: 30,
+          height: 15,
+          child: CustomPaint(
+            painter: TechnicalSunArcPainter(percent: pct),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text("SOLAR",
+            style: TextStyle(
+                color: Colors.white38,
+                fontSize: 8,
+                fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+class _CondensedWind extends StatelessWidget {
+  final double dir;
+  final double speed;
+  const _CondensedWind({required this.dir, required this.speed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Transform.rotate(
+            angle: dir * pi / 180,
+            child: const Icon(Icons.navigation,
+                color: Color(0xFF00D9FF), size: 16)),
+        const SizedBox(height: 4),
+        Text("${speed.round()}",
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }

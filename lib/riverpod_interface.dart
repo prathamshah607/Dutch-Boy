@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:weather/weather_mapper.dart';
 import 'data_calling.dart';
+import 'package:intl/intl.dart';
 
 // ===========================================================================
 // CITY MODEL
@@ -46,6 +48,118 @@ class City {
 // ===========================================================================
 // PROVIDERS
 // ===========================================================================
+
+String buildWeatherLLMContext(Map<String, dynamic> data) {
+  final current = data['current'] as Map<String, dynamic>;
+  final daily = data['daily'] as Map<String, dynamic>;
+  final hourly = data['hourly'] as Map<String, dynamic>;
+
+  final buf = StringBuffer();
+
+  // ========== CURRENT CONDITIONS ==========
+  final nowTime = DateTime.parse(current['time']);
+  final int wmoCode = current['weather_code'] as int;
+  buf.writeln('=== CURRENT CONDITIONS ===');
+  buf.writeln(
+      'As of ${DateFormat('yyyy-MM-dd HH:mm').format(nowTime)} local time:');
+  buf.writeln(
+      '- Temperature: ${current['temperature_2m'].round()} °C (feels like ${current['apparent_temperature'].round()} °C)');
+  buf.writeln(
+      '- Weather: ${WeatherMapper.getDescription(wmoCode)} (Code: $wmoCode)');
+  buf.writeln(
+      '- Precipitation: ${current['precipitation']} mm, humidity ${current['relative_humidity_2m']}%, wind ${current['wind_speed_10m'].round()} units');
+  buf.writeln(
+      '- Visibility: ${(hourly['visibility'][0] / 1000).round()} km, UV index ~${daily['uv_index_max'][0]}');
+  buf.writeln();
+
+  // ========== HOURLY TABLE (NEXT 24 HOURS) ==========
+  // This provides granular context for "Will it rain at 5 PM?"
+  buf.writeln('=== HOURLY FORECAST (NEXT 24 HOURS) ===');
+  buf.writeln('Format: Time | Temp | Feels Like | Rain Chance (Vol) | Wind');
+
+  final times = List<String>.from(hourly['time'] ?? []);
+  final temps = List<num>.from(hourly['temperature_2m'] ?? []);
+  final appTemps = List<num>.from(hourly['apparent_temperature'] ?? []);
+  final precipProbs = List<num>.from(hourly['precipitation_probability'] ?? []);
+  final precipVols = List<num>.from(hourly['precipitation'] ?? []);
+  final winds = List<num>.from(hourly['wind_speed_10m'] ?? []);
+
+  if (times.isNotEmpty) {
+    // 1. Find the index for the current hour
+    int startIdx = times.indexWhere((t) {
+      final tDate = DateTime.parse(t);
+      // Compare only up to the hour to match
+      return tDate.year == nowTime.year &&
+          tDate.month == nowTime.month &&
+          tDate.day == nowTime.day &&
+          tDate.hour == nowTime.hour;
+    });
+
+    if (startIdx < 0) startIdx = 0; // Fallback
+
+    // 2. Loop through the next 24 indices
+    final endIdx = (startIdx + 24).clamp(0, times.length);
+
+    for (int i = startIdx; i < endIdx; i++) {
+      final timeObj = DateTime.parse(times[i]);
+      final hourStr = DateFormat('HH:mm').format(timeObj); // e.g. "14:00"
+
+      // Data retrieval
+      final t = temps[i].round();
+      final app = appTemps[i].round();
+      final pop = precipProbs[i]; // Probability of Precip
+      final vol = precipVols[i]; // Volume in mm
+      final w = winds[i].round();
+
+      // compact row: "14:00 | 22°C | 24°C | 0% (0mm) | 12"
+      buf.writeln(
+        '$hourStr | ${t}°C | Feels ${app}°C | Rain $pop% (${vol}mm) | Wind $w',
+      );
+    }
+  } else {
+    buf.writeln('(Hourly data unavailable)');
+  }
+  buf.writeln();
+
+  // ========== 10-DAY DAILY SUMMARY ==========
+  buf.writeln('=== 10-DAY FORECAST SUMMARY ===');
+
+  final dTimes = List<String>.from(daily['time'] ?? []);
+  final tMin = List<num>.from(daily['temperature_2m_min'] ?? []);
+  final tMax = List<num>.from(daily['temperature_2m_max'] ?? []);
+  final rainSum = List<num>.from(daily['rain_sum'] ?? []);
+  final uvMax = List<num>.from(daily['uv_index_max'] ?? []);
+  final windMax = List<num>.from(daily['wind_speed_10m_max'] ?? []);
+
+  if (dTimes.isNotEmpty) {
+    final days = dTimes.length.clamp(0, 10);
+    num globalMin = tMin.sublist(0, days).reduce((a, b) => a < b ? a : b);
+    num globalMax = tMax.sublist(0, days).reduce((a, b) => a > b ? a : b);
+    num totalRain =
+        rainSum.sublist(0, days).fold(0.0, (a, b) => a + b.toDouble());
+    num maxUv = uvMax.sublist(0, days).reduce((a, b) => a > b ? a : b);
+    num maxWind10 = windMax.sublist(0, days).reduce((a, b) => a > b ? a : b);
+
+    buf.writeln(
+        '- Over the next $days days, daily minimum temperatures range from ${globalMin.round()}°C to ${globalMax.round()}°C.');
+    buf.writeln(
+        '- Total forecast rain over next $days days: ~${totalRain.toStringAsFixed(1)} mm.');
+    buf.writeln('- Maximum UV index in this period: ${maxUv.toString()}.');
+    buf.writeln(
+        '- Maximum daily wind speed in this period: ${maxWind10.round()} units.');
+    buf.writeln();
+    buf.writeln('- Day-by-day overview:');
+    for (int i = 0; i < days; i++) {
+      final date = DateTime.parse(dTimes[i]);
+      buf.writeln(
+          '  • ${DateFormat('EEE, MMM d').format(date)}: ${tMin[i].round()}°C to ${tMax[i].round()}°C, rain ${rainSum[i]} mm, max wind ${windMax[i].round()} units, max UV ${uvMax[i]}.');
+    }
+  } else {
+    buf.writeln('- Daily forecast unavailable.');
+  }
+
+  return buf.toString().trim();
+}
 
 // Current selected city (defaults to Mumbai)
 final currentCityProvider = StateProvider<City>((ref) {
