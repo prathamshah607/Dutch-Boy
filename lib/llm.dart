@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:weather_icons/weather_icons.dart';
@@ -135,8 +136,8 @@ class _ClimateAssistantPageState extends State<ClimateAssistantPage> {
   String? _contextCache;
 
   // ==================== GROQ API CONFIGURATION ====================
-  // Insert your Groq API Key here (https://console.groq.com/keys)
-  static const String _groqApiKey = 'GROQ_API_KEY_REMOVED';
+  // Key is loaded from .env file (GROQ_API_KEY)
+  static String get _groqApiKey => dotenv.env['GROQ_API_KEY'] ?? '';
 
   // GPT-OSS Models available on Groq:
   // - llama-3.3-70b-versatile (recommended - fast + capable)
