@@ -15,7 +15,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
     final selectedDuration = ref.watch(selectedDurationProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: const Color(0xFF131A1F),
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -52,7 +52,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
             ),
             child: DropdownButton<HistoricalDuration>(
               value: selectedDuration,
-              dropdownColor: const Color(0xFF1D1E33),
+              dropdownColor: const Color(0xFF1F2A31),
               underline: const SizedBox(),
               icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
               style: const TextStyle(
@@ -103,7 +103,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: Colors.cyanAccent),
+              const CircularProgressIndicator(color: Color(0xFF6E8473)),
               const SizedBox(height: 20),
               Text(
                 'LOADING HISTORICAL DATA...',
@@ -128,18 +128,18 @@ class HistoricalWeatherScreen extends ConsumerWidget {
         margin: const EdgeInsets.all(20),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.redAccent, width: 2),
+          border: Border.all(color: const Color(0xFF9C5E5E), width: 2),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+            const Icon(Icons.error_outline, color: Color(0xFF9C5E5E), size: 48),
             const SizedBox(height: 16),
             Text(
               'ERROR',
               style: TextStyle(
-                color: Colors.redAccent,
+                color: const Color(0xFF9C5E5E),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -172,9 +172,9 @@ class HistoricalWeatherScreen extends ConsumerWidget {
       child: _buildMultiLineChart(
         times: times,
         datasets: [
-          ChartDataset('MAX', maxTemps, Colors.red.shade400),
-          ChartDataset('MEAN', meanTemps, Colors.orange.shade300),
-          ChartDataset('MIN', minTemps, Colors.blue.shade400),
+          ChartDataset('MAX', maxTemps, const Color(0xFFA6755B)),
+          ChartDataset('MEAN', meanTemps, const Color(0xFF9B7D5D)),
+          ChartDataset('MIN', minTemps, const Color(0xFF6B8193)),
         ],
       ),
     );
@@ -190,7 +190,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
     return _buildGraphCard(
       title: 'PRECIPITATION',
       unit: 'mm',
-      child: _buildBarChart(times, precip, Colors.blue.shade300),
+      child: _buildBarChart(times, precip, const Color(0xFF6B8193)),
     );
   }
 
@@ -210,9 +210,9 @@ class HistoricalWeatherScreen extends ConsumerWidget {
       child: _buildMultiLineChart(
         times: times,
         datasets: [
-          ChartDataset('MAX', maxApparent, Colors.deepOrange.shade300),
-          ChartDataset('MEAN', meanApparent, Colors.amber.shade300),
-          ChartDataset('MIN', minApparent, Colors.cyan.shade300),
+          ChartDataset('MAX', maxApparent, const Color(0xFFA6755B)),
+          ChartDataset('MEAN', meanApparent, const Color(0xFF9B7D5D)),
+          ChartDataset('MIN', minApparent, const Color(0xFF6E8473)),
         ],
       ),
     );
@@ -232,8 +232,8 @@ class HistoricalWeatherScreen extends ConsumerWidget {
       child: _buildMultiLineChart(
         times: times,
         datasets: [
-          ChartDataset('GUSTS', gustsMax, Colors.purple.shade300),
-          ChartDataset('SUSTAINED', windMax, Colors.indigo.shade300),
+          ChartDataset('GUSTS', gustsMax, const Color(0xFF7B6E7C)),
+          ChartDataset('SUSTAINED', windMax, const Color(0xFF4E6373)),
         ],
       ),
     );
@@ -249,7 +249,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
     return _buildGraphCard(
       title: 'SOLAR RADIATION',
       unit: 'MJ/m²',
-      child: _buildAreaChart(times, radiation, Colors.yellow.shade600),
+      child: _buildAreaChart(times, radiation, const Color(0xFFB49B6B)),
     );
   }
 
@@ -266,7 +266,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
     return _buildGraphCard(
       title: 'SUNSHINE DURATION',
       unit: 'hours',
-      child: _buildBarChart(times, sunshineHours, Colors.amber.shade400),
+      child: _buildBarChart(times, sunshineHours, const Color(0xFF9B7D5D)),
     );
   }
 
@@ -284,7 +284,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
             context,
             MaterialPageRoute(
               builder: (context) => Scaffold(
-                backgroundColor: const Color(0xFF0A0E21),
+                backgroundColor: const Color(0xFF131A1F),
                 appBar: AppBar(
                   backgroundColor: Colors.black,
                   elevation: 0,
@@ -312,7 +312,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
           margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF1D1E33),
+            color: const Color(0xFF1F2A31),
             border: Border.all(color: Colors.white12, width: 1),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -371,7 +371,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1D1E33),
+        color: const Color(0xFF1F2A31),
         border: Border.all(color: Colors.white12, width: 1),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -424,7 +424,7 @@ class HistoricalWeatherScreen extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1D1E33),
+        color: const Color(0xFF1F2A31),
         border: Border.all(color: Colors.white12, width: 1),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -878,8 +878,8 @@ class WeatherHeatmap extends StatelessWidget {
                           '${DateFormat('MMM d').format(date)}: ${formatValue(value)}',
                       preferBelow: false,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1D1E33),
-                        border: Border.all(color: const Color(0xFF00D9FF)),
+                        color: const Color(0xFF1F2A31),
+                        border: Border.all(color: const Color(0xFF6E8473)),
                       ),
                       textStyle: const TextStyle(
                         color: Colors.white,

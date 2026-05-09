@@ -91,7 +91,9 @@ class WikipediaService {
     for (var line in lines) {
       if (line.trim().isEmpty ||
           line.startsWith('[[File:') ||
-          line.startsWith('{{')) continue;
+          line.startsWith('{{')) {
+        continue;
+      }
 
       final match = headerRegex.firstMatch(line);
       if (match != null) {

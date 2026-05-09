@@ -102,7 +102,7 @@ String buildWeatherLLMContext(Map<String, dynamic> data) {
 
       // compact row: "14:00 | 22°C | 24°C | 0% (0mm) | 12"
       buf.writeln(
-        '$hourStr | ${t}°C | Feels ${app}°C | Rain $pop% (${vol}mm) | Wind $w',
+        '$hourStr | $t°C | Feels $app°C | Rain $pop% (${vol}mm) | Wind $w',
       );
     }
   } else {

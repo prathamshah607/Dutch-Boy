@@ -398,7 +398,7 @@ $_contextCache
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
+      backgroundColor: const Color(0xFF131A1F),
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -420,17 +420,17 @@ $_contextCache
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00D9FF).withOpacity(0.2),
+                    color: const Color(0xFF6E8473).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(4),
                     border:
-                        Border.all(color: const Color(0xFF00D9FF), width: 1),
+                        Border.all(color: const Color(0xFF6E8473), width: 1),
                   ),
                   child: const Text(
                     'GROQ',
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF00D9FF),
+                      color: Color(0xFF6E8473),
                       letterSpacing: 1,
                     ),
                   ),
@@ -464,7 +464,7 @@ $_contextCache
       body: Column(
         children: [
           if (_loading && _messages.isEmpty)
-            const LinearProgressIndicator(color: Color(0xFF00D9FF)),
+            const LinearProgressIndicator(color: Color(0xFF6E8473)),
 
           // Quick Action Chips
           if (_messages.length <= 2 && !_loading) _buildQuickActions(),
@@ -484,7 +484,7 @@ $_contextCache
           if (_loading && _messages.isNotEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 4),
-              child: LinearProgressIndicator(color: Color(0xFF00D9FF)),
+              child: LinearProgressIndicator(color: Color(0xFF6E8473)),
             ),
 
           _buildInputArea(),
@@ -538,11 +538,11 @@ $_contextCache
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: isUser
-                    ? const Color(0xFF00D9FF).withOpacity(0.18)
+                    ? const Color(0xFF6E8473).withOpacity(0.18)
                     : Colors.black.withOpacity(0.65),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isUser ? const Color(0xFF00D9FF) : Colors.white24,
+                  color: isUser ? const Color(0xFF6E8473) : Colors.white24,
                   width: 1,
                 ),
               ),
@@ -600,7 +600,7 @@ $_contextCache
           text: part,
           style: TextStyle(
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold ? const Color(0xFF00D9FF) : Colors.white,
+            color: isBold ? const Color(0xFF6E8473) : Colors.white,
           ),
         ));
         isBold = !isBold;
@@ -689,12 +689,12 @@ $_contextCache
         children: [
           Row(
             children: [
-              const Icon(Icons.schedule, color: Color(0xFF00D9FF), size: 16),
+              const Icon(Icons.schedule, color: Color(0xFF6E8473), size: 16),
               const SizedBox(width: 6),
               const Text(
                 'HOURLY FORECAST',
                 style: TextStyle(
-                  color: Color(0xFF00D9FF),
+                  color: Color(0xFF6E8473),
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
@@ -748,8 +748,9 @@ $_contextCache
                         Text(
                           '💧$rainChance%',
                           style: TextStyle(
-                            color:
-                                rainChance > 50 ? Colors.blue : Colors.white38,
+                            color: rainChance > 50
+                                ? const Color(0xFF7E97A8)
+                                : Colors.white38,
                             fontSize: 9,
                           ),
                         ),
@@ -788,12 +789,12 @@ $_contextCache
           Row(
             children: [
               const Icon(Icons.calendar_today,
-                  color: Color(0xFF00D9FF), size: 16),
+                  color: Color(0xFF6E8473), size: 16),
               const SizedBox(width: 6),
               const Text(
                 '7-DAY FORECAST',
                 style: TextStyle(
-                  color: Color(0xFF00D9FF),
+                  color: Color(0xFF6E8473),
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
@@ -837,7 +838,7 @@ $_contextCache
                     Text(
                       '${rain.toStringAsFixed(1)}mm',
                       style: const TextStyle(
-                        color: Colors.lightBlueAccent,
+                        color: Color(0xFF88A0AE),
                         fontSize: 10,
                       ),
                     ),
@@ -889,7 +890,7 @@ $_contextCache
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Colors.blue, Colors.orange],
+                        colors: [Color(0xFF6B8193), Color(0xFFA6755B)],
                       ),
                       borderRadius: BorderRadius.circular(3),
                     ),
@@ -925,19 +926,19 @@ $_contextCache
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF00D9FF).withOpacity(0.15),
-            const Color(0xFF0A0E21).withOpacity(0.8),
+            const Color(0xFF6E8473).withOpacity(0.15),
+            const Color(0xFF131A1F).withOpacity(0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF00D9FF).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF6E8473).withOpacity(0.3)),
       ),
       child: Row(
         children: [
           BoxedIcon(
             WeatherMapper.getIcon(code, isDay),
             size: 48,
-            color: const Color(0xFF00D9FF),
+            color: const Color(0xFF6E8473),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -955,7 +956,7 @@ $_contextCache
                 Text(
                   WeatherMapper.getDescription(code),
                   style: const TextStyle(
-                    color: Color(0xFF00D9FF),
+                    color: Color(0xFF6E8473),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1000,19 +1001,19 @@ $_contextCache
     Color color;
     if (uvMax <= 2) {
       level = 'Low';
-      color = Colors.green;
+      color = const Color(0xFF7A8E78);
     } else if (uvMax <= 5) {
       level = 'Moderate';
-      color = Colors.yellow;
+      color = const Color(0xFFB49B6B);
     } else if (uvMax <= 7) {
       level = 'High';
-      color = Colors.orange;
+      color = const Color(0xFFA97A55);
     } else if (uvMax <= 10) {
       level = 'Very High';
-      color = Colors.red;
+      color = const Color(0xFF9C5E5E);
     } else {
       level = 'Extreme';
-      color = Colors.purple;
+      color = const Color(0xFF7B6E7C);
     }
 
     return Container(
@@ -1080,13 +1081,13 @@ $_contextCache
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.15),
+        color: const Color(0xFF6B8193).withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF6B8193).withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.umbrella, color: Colors.lightBlueAccent, size: 24),
+          const Icon(Icons.umbrella, color: Color(0xFF88A0AE), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1095,7 +1096,7 @@ $_contextCache
                 Text(
                   'PRECIPITATION (12H)',
                   style: TextStyle(
-                    color: Colors.lightBlueAccent,
+                    color: const Color(0xFF88A0AE),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1119,9 +1120,9 @@ $_contextCache
     final gusts = current['wind_gusts_10m'].round();
 
     String direction = '';
-    if (windDir >= 337.5 || windDir < 22.5)
+    if (windDir >= 337.5 || windDir < 22.5) {
       direction = 'N';
-    else if (windDir < 67.5)
+    } else if (windDir < 67.5)
       direction = 'NE';
     else if (windDir < 112.5)
       direction = 'E';
@@ -1140,13 +1141,13 @@ $_contextCache
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.teal.withOpacity(0.15),
+        color: const Color(0xFF4E6373).withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.teal.withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF4E6373).withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.air, color: Colors.tealAccent, size: 24),
+          const Icon(Icons.air, color: Color(0xFF7C998B), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1155,7 +1156,7 @@ $_contextCache
                 const Text(
                   'WIND CONDITIONS',
                   style: TextStyle(
-                    color: Colors.tealAccent,
+                    color: Color(0xFF7C998B),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1181,23 +1182,23 @@ $_contextCache
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.green.withOpacity(0.2),
-            Colors.teal.withOpacity(0.1),
+            const Color(0xFF7A8E78).withOpacity(0.2),
+            const Color(0xFF4E6373).withOpacity(0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.4)),
+        border: Border.all(color: const Color(0xFF8AA17C).withOpacity(0.4)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.greenAccent.withOpacity(0.2),
+              color: const Color(0xFF8AA17C).withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.directions_run,
-                color: Colors.greenAccent, size: 24),
+                color: Color(0xFF8AA17C), size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1207,7 +1208,7 @@ $_contextCache
                 const Text(
                   'ACTIVITY SUGGESTION',
                   style: TextStyle(
-                    color: Colors.greenAccent,
+                    color: Color(0xFF8AA17C),
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -1235,14 +1236,14 @@ $_contextCache
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.15),
+        color: const Color(0xFF9C5E5E).withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFF9C5E5E).withOpacity(0.5)),
       ),
       child: Row(
         children: [
           const Icon(Icons.warning_amber_rounded,
-              color: Colors.redAccent, size: 24),
+              color: Color(0xFF9C5E5E), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1251,7 +1252,7 @@ $_contextCache
                 const Text(
                   'WEATHER ALERT',
                   style: TextStyle(
-                    color: Colors.redAccent,
+                    color: Color(0xFF9C5E5E),
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -1306,7 +1307,7 @@ $_contextCache
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: Color(0xFF00D9FF)),
+                    borderSide: const BorderSide(color: Color(0xFF6E8473)),
                   ),
                 ),
                 onSubmitted: (_) => _sendMessage(),
@@ -1316,7 +1317,7 @@ $_contextCache
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: _loading ? Colors.white12 : const Color(0xFF00D9FF),
+                color: _loading ? Colors.white12 : const Color(0xFF6E8473),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: IconButton(

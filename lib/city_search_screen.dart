@@ -13,8 +13,10 @@ class CitySearchScreen extends ConsumerStatefulWidget {
 class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
   String _searchQuery = "";
 
-  // Muted accent color
-  static const _accent = Color(0xFF4DD0E1); // teal-ish cyan, not neon
+  static const _bg = Color(0xFF12171D);
+  static const _panel = Color(0xFF1A2228);
+  static const _surface = Color(0xFF222D33);
+  static const _accent = Color(0xFF6E8473);
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +25,9 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
         : ref.watch(citySearchProvider(_searchQuery));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF050608),
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF111217),
+        backgroundColor: _panel,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white70),
@@ -34,8 +36,9 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
         title: Container(
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFF08090D),
-            border: Border.all(color: Colors.white12, width: 1),
+            color: _surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white10, width: 1),
           ),
           child: TextField(
             autofocus: true,
@@ -75,7 +78,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
           preferredSize: const Size.fromHeight(1),
           child: Container(
             height: 1,
-            color: Colors.white12,
+            color: Colors.white10,
           ),
         ),
       ),
@@ -127,8 +130,9 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF111217),
-                      border: Border.all(color: Colors.white12, width: 1),
+                      color: _surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white10, width: 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +149,7 @@ class _CitySearchScreenState extends ConsumerState<CitySearchScreen> {
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   border: Border.all(
-                                    color: Colors.white24,
+                                    color: Colors.white12,
                                     width: 1,
                                   ),
                                 ),
