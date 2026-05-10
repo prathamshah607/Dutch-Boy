@@ -43,7 +43,8 @@ dependencies:
   google_generative_ai: ^0.4.7
   flutter_dotenv: ^5.2.1
   google_fonts: ^6.2.1
-  flutter_map: ^8.3.0
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:

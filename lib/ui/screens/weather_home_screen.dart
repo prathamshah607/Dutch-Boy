@@ -11,6 +11,7 @@ import 'package:weather/ui/screens/city_search_screen.dart';
 import 'package:weather/ui/widgets/weather_components.dart';
 import 'package:weather/ui/screens/historical_weather_screen.dart';
 import 'package:weather/ui/screens/daily_detail_screen.dart';
+import 'package:weather/ui/screens/data_table_screen.dart';
 
 class WeatherHomeScreen extends ConsumerWidget {
   const WeatherHomeScreen({super.key});
@@ -674,11 +675,19 @@ class _TopControls extends ConsumerWidget {
                   child: Text('VIEW HISTORICAL GRAPH',
                       style: TextStyle(color: Colors.white))),
               PopupMenuItem(
+                  value: 'data',
+                  child: Text('RAW DATA TABLE',
+                      style: TextStyle(color: Colors.white))),
+              PopupMenuItem(
                   value: 'map',
                   child: Text('WEATHER MAP',
                       style: TextStyle(color: Colors.white))),
             ],
             onSelected: (value) {
+              if (value == 'data') {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const DataTableScreen()));
+              }
               if (value == 'map') {
                 Navigator.push(
                     context,

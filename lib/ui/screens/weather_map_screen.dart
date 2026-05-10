@@ -1,46 +1,51 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:weather/data/weather_providers.dart';
 
-// ─── Available weather model domains ─────────────────────────────────────────
-// These match the ?domain= parameter on maps.open-meteo.com
+
+import 'dart:io' show Platform;
+
+// ─── Domains ──────────────────────────────────────────────────────────────────
+
 enum MapDomain {
-  best(       'best_match',                         'BEST MATCH'),
-  ecmwf(      'ecmwf_ifs025',                       'ECMWF IFS'),
-  ukmo(       'ukmo_global_deterministic_10km',     'UKMO'),
-  gfs(        'gfs_seamless',                       'GFS'),
-  icon(       'icon_seamless',                      'ICON'),
-  gem(        'gem_seamless',                       'GEM'),
-  meteofrance('meteofrance_seamless',               'MÉTÉO-FRANCE');
+  best('best_match', 'BEST MATCH'),
+  ecmwf('ecmwf_ifs025', 'ECMWF IFS'),
+  ukmo('ukmo_global_deterministic_10km', 'UKMO'),
+  gfs('gfs_seamless', 'GFS'),
+  icon('icon_seamless', 'ICON'),
+  gem('gem_seamless', 'GEM'),
+  meteofrance('meteofrance_seamless', 'MÉTÉO-FRANCE');
 
   final String code;
   final String label;
   const MapDomain(this.code, this.label);
 }
 
-// ─── Available overlay variables ─────────────────────────────────────────────
-// These match the ?variable= parameter on maps.open-meteo.com
+// ─── Variables ────────────────────────────────────────────────────────────────
+
 enum WeatherVariable {
-  temperature(    'temperature_2m',             'TEMPERATURE',   Icons.thermostat,         Color(0xFFA6755B)),
-  precipitation(  'precipitation',              'PRECIPITATION', Icons.water_drop,          Colors.blueAccent),
-  rain(           'rain',                       'RAIN',          Icons.grain,               Color(0xFF5B8FA6)),
-  snowfall(       'snowfall',                   'SNOWFALL',      Icons.ac_unit,             Colors.white70),
-  windSpeed(      'wind_speed_10m',             'WIND 10M',      Icons.air,                 Color(0xFF6E8473)),
-  windSpeed80m(   'wind_speed_80m',             'WIND 80M',      Icons.air,                 Color(0xFF8EA693)),
-  windGusts(      'wind_gusts_10m',             'WIND GUSTS',    Icons.storm,               Color(0xFF9B7D5D)),
-  cape(           'cape',                       'CAPE',          Icons.bolt,                Color(0xFFB49B6B)),
-  cloudCover(     'cloud_cover',                'CLOUD COVER',   Icons.cloud,               Colors.white60),
-  pressure(       'pressure_msl',               'PRESSURE MSL',  Icons.compress,            Colors.purpleAccent),
-  dewPoint(       'dew_point_2m',               'DEW POINT',     Icons.water,               Color(0xFF6EA8B0)),
-  humidity(       'relative_humidity_2m',       'HUMIDITY',      Icons.opacity,             Color(0xFF7AA8B0)),
-  uvIndex(        'uv_index',                   'UV INDEX',      Icons.wb_sunny,            Color(0xFFD4A94B)),
-  soilTemp(       'soil_temperature_6cm',       'SOIL TEMP',     Icons.grass,               Color(0xFF8B6B4A)),
-  snowDepth(      'snow_depth',                 'SNOW DEPTH',    Icons.layers,              Color(0xFFB0D4E8)),
-  visibility(     'visibility',                 'VISIBILITY',    Icons.visibility,          Color(0xFF7B9EA6));
+  temperature(
+      'temperature_2m', 'TEMPERATURE', Icons.thermostat, Color(0xFFA6755B)),
+  precipitation('precipitation', 'PRECIP', Icons.water_drop, Colors.blueAccent),
+  rain('rain', 'RAIN', Icons.grain, Color(0xFF5B8FA6)),
+  snowfall('snowfall', 'SNOWFALL', Icons.ac_unit, Colors.white70),
+  windSpeed('wind_speed_10m', 'WIND 10M', Icons.air, Color(0xFF6E8473)),
+  windGusts('wind_gusts_10m', 'GUSTS', Icons.storm, Color(0xFF9B7D5D)),
+  cape('cape', 'CAPE', Icons.bolt, Color(0xFFB49B6B)),
+  cloudCover('cloud_cover', 'CLOUDS', Icons.cloud, Colors.white60),
+  pressure('pressure_msl', 'PRESSURE', Icons.compress, Colors.purpleAccent),
+  dewPoint('dew_point_2m', 'DEW POINT', Icons.water, Color(0xFF6EA8B0)),
+  humidity(
+      'relative_humidity_2m', 'HUMIDITY', Icons.opacity, Color(0xFF7AA8B0)),
+  uvIndex('uv_index', 'UV INDEX', Icons.wb_sunny, Color(0xFFD4A94B)),
+  soilTemp('soil_temperature_6cm', 'SOIL TEMP', Icons.grass, Color(0xFF8B6B4A)),
+  snowDepth('snow_depth', 'SNOW DEPTH', Icons.layers, Color(0xFFB0D4E8)),
+  visibility('visibility', 'VISIBILITY', Icons.visibility, Color(0xFF7B9EA6));
 
   final String code;
   final String label;
@@ -51,45 +56,70 @@ enum WeatherVariable {
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
-final _activeDomainProvider   = StateProvider<MapDomain>((ref)       => MapDomain.best);
-final _activeVariableProvider = StateProvider<WeatherVariable>((ref) => WeatherVariable.temperature);
-final _overlayOpacityProvider = StateProvider<double>((ref)          => 0.75);
-
-// Tracks the selected forecast time offset in hours from now (0 = current)
+final _activeDomainProvider = StateProvider<MapDomain>((ref) => MapDomain.best);
+final _activeVariableProvider =
+    StateProvider<WeatherVariable>((ref) => WeatherVariable.temperature);
 final _timeOffsetProvider = StateProvider<int>((ref) => 0);
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+// ─── Root screen — splits on platform ────────────────────────────────────────
 
 class WeatherMapScreen extends ConsumerWidget {
   const WeatherMapScreen({super.key});
 
-  // Builds the ISO timestamp used by Open-Meteo maps tiles
-  // Format: YYYY-MM-DDTHHMM  e.g. 2026-05-10T0600
-  static String _buildTimeParam(int offsetHours) {
-    final t = DateTime.now().toUtc().add(Duration(hours: offsetHours));
-    // Round down to nearest hour
-    final rounded = DateTime.utc(t.year, t.month, t.day, t.hour);
-    final date = DateFormat('yyyy-MM-dd').format(rounded);
-    final hour = rounded.hour.toString().padLeft(2, '0');
-    return '${date}T${hour}00';
-  }
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // kIsWeb is a compile-time constant — zero runtime cost
+    final bool useRedirect =
+        kIsWeb || (!kIsWeb && (Platform.isLinux || Platform.isWindows));
 
-  // Open-Meteo tile URL template
-  static String _tileUrl(MapDomain domain, WeatherVariable variable, int offsetHours) {
-    final time = _buildTimeParam(offsetHours);
-    return 'https://maps.open-meteo.com/tiles/'
-           '${domain.code}/${variable.code}/$time/{z}/{x}/{y}.png';
+    if (useRedirect) {
+      return const _WebRedirectMap();
+    }
+    return const _NativeMapView();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEB — redirect card
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _WebRedirectMap extends ConsumerWidget {
+  const _WebRedirectMap();
+
+  static String _buildUrl({
+    required String domain,
+    required String variable,
+    required int offsetHours,
+    required double lat,
+    required double lon,
+  }) {
+    final t = DateTime.now().toUtc().add(Duration(hours: offsetHours));
+    final rounded = DateTime.utc(t.year, t.month, t.day, t.hour);
+    final timeParam =
+        '${DateFormat('yyyy-MM-dd').format(rounded)}T${rounded.hour.toString().padLeft(2, '0')}00';
+
+    // Hash fragment = MapLibre deep-link: #zoom/lat/lon
+    return 'https://maps.open-meteo.com/'
+        '?domain=$domain'
+        '&variable=$variable'
+        '&time=$timeParam'
+        '#5/$lat/$lon';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final city       = ref.watch(currentCityProvider);
-    final domain     = ref.watch(_activeDomainProvider);
-    final variable   = ref.watch(_activeVariableProvider);
-    final opacity    = ref.watch(_overlayOpacityProvider);
-    final offset     = ref.watch(_timeOffsetProvider);
-    final center     = LatLng(city.latitude, city.longitude);
-    final mapCtrl    = MapController();
+    final city = ref.watch(currentCityProvider);
+    final domain = ref.watch(_activeDomainProvider);
+    final variable = ref.watch(_activeVariableProvider);
+    final offset = ref.watch(_timeOffsetProvider);
+
+    final url = _buildUrl(
+      domain: domain.code,
+      variable: variable.code,
+      offsetHours: offset,
+      lat: city.latitude,
+      lon: city.longitude,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B24),
@@ -98,68 +128,257 @@ class WeatherMapScreen extends ConsumerWidget {
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
         ),
-        child: Stack(children: [
-
-          // ── MAP ──────────────────────────────────────────────────────────
-          FlutterMap(
-            mapController: mapCtrl,
-            options: MapOptions(
-              initialCenter: center,
-              initialZoom: 5.5,
-              minZoom: 2.0,
-              maxZoom: 10.0,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
-              ),
-            ),
-            children: [
-
-              // 1. Base — Carto dark (no key required)
-              TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'com.example.weather',
-                retinaMode: true,
-              ),
-
-              // 2. Open-Meteo weather overlay
-              Opacity(
-                opacity: opacity,
-                child: TileLayer(
-                  key: ValueKey('$domain-$variable-$offset'), // force rebuild on change
-                  urlTemplate: _tileUrl(domain, variable, offset),
-                  userAgentPackageName: 'com.example.weather',
-                  tileProvider: NetworkTileProvider(),
-                  errorTileCallback: (tile, error, _) {
-                    // Silently swallow missing tiles — not all domains have all variables
-                  },
+        child: SafeArea(
+          child: Column(children: [
+            // ── TOP BAR ─────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                _MapButton(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.arrow_back,
+                      color: Colors.white, size: 20),
                 ),
-              ),
-
-              // 3. City pin
-              MarkerLayer(markers: [
-                Marker(
-                  point: center,
-                  width: 140,
-                  height: 60,
-                  child: _CityMarker(cityName: city.name),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(178),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(children: [
+                      Container(
+                          width: 3, height: 14, color: const Color(0xFF6E8473)),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${variable.label}  ·  ${domain.label}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5),
+                          ),
+                          const Text(
+                            'WEB PLATFORM  ·  EXTERNAL RENDERER',
+                            style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 9,
+                                letterSpacing: 1.2),
+                          ),
+                        ],
+                      ),
+                    ]),
+                  ),
                 ),
               ]),
+            ),
 
-              // 4. Attribution (required by OSM ToS)
-              RichAttributionWidget(
-                attributions: [
-                  TextSourceAttribution('© CartoDB'),
-                  TextSourceAttribution('© OpenStreetMap contributors'),
-                  TextSourceAttribution('Weather tiles © Open-Meteo'),
+            // ── SELECTORS (so user can configure before launching) ───────────
+            _VariableSelector(
+                activeVariable: variable, ref: ref, compact: true),
+            const SizedBox(height: 4),
+            _DomainSelector(activeDomain: domain, ref: ref, horizontal: true),
+            const SizedBox(height: 4),
+            _TimeScrubber(offset: offset, ref: ref),
+
+            const Spacer(),
+
+            // ── REDIRECT CARD ────────────────────────────────────────────────
+            Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(153),
+                border: Border.all(color: const Color(0xFF6E8473), width: 1.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Container(
+                        width: 4, height: 16, color: const Color(0xFF6E8473)),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'WEATHER MAP',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2),
+                    ),
+                  ]),
+                  const SizedBox(height: 12),
+                  Text(
+                    'The interactive weather map uses Open-Meteo\'s WebGL '
+                    'renderer which requires a native browser environment. '
+                    'The map will open pre-configured with your current '
+                    'settings — ${variable.label.toLowerCase()}, '
+                    '${domain.label}, centred on ${city.name}.',
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 12, height: 1.6),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // URL preview
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    color: Colors.black38,
+                    child: Text(
+                      url,
+                      style: const TextStyle(
+                          color: Color(0xFF6E8473),
+                          fontSize: 9,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.5),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Launch button
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final uri = Uri.parse(url);
+                        try {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: const Color(0xFF1F2A31),
+                                content: Text(
+                                  'Could not open browser: $e',
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6E8473).withAlpha(38),
+                          border: Border.all(color: const Color(0xFF6E8473)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.open_in_new,
+                                color: Color(0xFF6E8473), size: 16),
+                            SizedBox(width: 10),
+                            Text(
+                              'OPEN IN OPEN-METEO MAPS',
+                              style: TextStyle(
+                                  color: Color(0xFF6E8473),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
 
+            const Spacer(),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NATIVE (Android / iOS) — WebView embedding maps.open-meteo.com
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _NativeMapView extends ConsumerStatefulWidget {
+  const _NativeMapView();
+
+  @override
+  ConsumerState<_NativeMapView> createState() => _NativeMapViewState();
+}
+
+class _NativeMapViewState extends ConsumerState<_NativeMapView> {
+  late final WebViewController _webCtrl;
+  bool _loading = true;
+
+  static String _buildUrl({
+    required String domain,
+    required String variable,
+    required int offsetHours,
+    required double lat,
+    required double lon,
+  }) {
+    final t = DateTime.now().toUtc().add(Duration(hours: offsetHours));
+    final rounded = DateTime.utc(t.year, t.month, t.day, t.hour);
+    final timeParam =
+        '${DateFormat('yyyy-MM-dd').format(rounded)}T${rounded.hour.toString().padLeft(2, '0')}00';
+    return 'https://maps.open-meteo.com/'
+        '?domain=$domain'
+        '&variable=$variable'
+        '&time=$timeParam'
+        '#5/$lat/$lon';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _webCtrl = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted: (_) => setState(() => _loading = true),
+        onPageFinished: (_) => setState(() => _loading = false),
+      ));
+    _loadMap();
+  }
+
+  void _loadMap() {
+    final city = ref.read(currentCityProvider);
+    final domain = ref.read(_activeDomainProvider);
+    final variable = ref.read(_activeVariableProvider);
+    final offset = ref.read(_timeOffsetProvider);
+
+    _webCtrl.loadRequest(Uri.parse(_buildUrl(
+      domain: domain.code,
+      variable: variable.code,
+      offsetHours: offset,
+      lat: city.latitude,
+      lon: city.longitude,
+    )));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final domain = ref.watch(_activeDomainProvider);
+    final variable = ref.watch(_activeVariableProvider);
+    final offset = ref.watch(_timeOffsetProvider);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B24),
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+        ),
+        child: Column(children: [
           // ── TOP BAR ───────────────────────────────────────────────────────
           SafeArea(
+            bottom: false,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(children: [
@@ -179,9 +398,7 @@ class WeatherMapScreen extends ConsumerWidget {
                     ),
                     child: Row(children: [
                       Container(
-                          width: 3,
-                          height: 14,
-                          color: const Color(0xFF6E8473)),
+                          width: 3, height: 14, color: const Color(0xFF6E8473)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -211,11 +428,11 @@ class WeatherMapScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      // Re-centre button
+                      // Reload button — re-navigates with updated params
                       GestureDetector(
-                        onTap: () => mapCtrl.move(center, 5.5),
-                        child: const Icon(Icons.my_location,
-                            color: Colors.white54, size: 18),
+                        onTap: _loadMap,
+                        child: const Icon(Icons.refresh,
+                            color: Colors.white38, size: 18),
                       ),
                     ]),
                   ),
@@ -224,34 +441,28 @@ class WeatherMapScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── DOMAIN SELECTOR (top-right pill) ──────────────────────────────
-          Positioned(
-            top: 90,
-            right: 12,
-            child: _DomainSelector(activeDomain: domain, ref: ref),
+          // ── SELECTOR STRIP ────────────────────────────────────────────────
+          _VariableSelector(activeVariable: variable, ref: ref, compact: false),
+
+          // ── WEBVIEW ───────────────────────────────────────────────────────
+          Expanded(
+            child: Stack(children: [
+              WebViewWidget(controller: _webCtrl),
+              if (_loading)
+                const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF6E8473)),
+                ),
+            ]),
           ),
 
-          // ── OPACITY SLIDER (right side) ────────────────────────────────────
-          Positioned(
-            right: 12,
-            top: 240,
-            child: _OpacitySlider(opacity: opacity, ref: ref),
-          ),
-
-          // ── TIME SCRUBBER (above variable selector) ────────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 130,
-            child: _TimeScrubber(offset: offset, ref: ref),
-          ),
-
-          // ── VARIABLE SELECTOR (bottom) ─────────────────────────────────────
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _VariableSelector(activeVariable: variable, ref: ref),
+          // ── TIME SCRUBBER + DOMAIN (above system nav) ─────────────────────
+          Container(
+            color: Colors.black.withAlpha(204),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _TimeScrubber(offset: offset, ref: ref),
+              _DomainSelector(activeDomain: domain, ref: ref, horizontal: true),
+              const SizedBox(height: 8),
+            ]),
           ),
         ]),
       ),
@@ -259,129 +470,34 @@ class WeatherMapScreen extends ConsumerWidget {
   }
 }
 
-// ─── City Marker ──────────────────────────────────────────────────────────────
-
-class _CityMarker extends StatelessWidget {
-  final String cityName;
-  const _CityMarker({required this.cityName});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withAlpha(210),
-            border: Border.all(color: const Color(0xFF6E8473), width: 1.5),
-          ),
-          child: Text(
-            cityName.toUpperCase(),
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2),
-          ),
-        ),
-        Container(width: 2, height: 8, color: const Color(0xFF6E8473)),
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-              color: Color(0xFF6E8473), shape: BoxShape.circle),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Domain Selector ──────────────────────────────────────────────────────────
-
-class _DomainSelector extends StatelessWidget {
-  final MapDomain activeDomain;
-  final WidgetRef ref;
-  const _DomainSelector({required this.activeDomain, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(204),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white12))),
-            child: const Text('MODEL',
-                style: TextStyle(
-                    color: Color(0xFF6E8473),
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5)),
-          ),
-          ...MapDomain.values.map((d) {
-            final isActive = d == activeDomain;
-            return GestureDetector(
-              onTap: () =>
-                  ref.read(_activeDomainProvider.notifier).state = d,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 7),
-                color: isActive
-                    ? const Color(0xFF6E8473).withAlpha(51)
-                    : Colors.transparent,
-                child: Text(
-                  d.label,
-                  style: TextStyle(
-                      color: isActive ? const Color(0xFF6E8473) : Colors.white38,
-                      fontSize: 9,
-                      fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
-                      letterSpacing: 1),
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Variable Selector ────────────────────────────────────────────────────────
+// ─── Shared UI widgets ────────────────────────────────────────────────────────
 
 class _VariableSelector extends StatelessWidget {
   final WeatherVariable activeVariable;
   final WidgetRef ref;
+  final bool compact;
   const _VariableSelector(
-      {required this.activeVariable, required this.ref});
+      {required this.activeVariable, required this.ref, required this.compact});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(217),
-        border: const Border(top: BorderSide(color: Colors.white12)),
-      ),
+      color: Colors.black.withAlpha(204),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
           children: WeatherVariable.values.map((v) {
             final isActive = v == activeVariable;
             return GestureDetector(
-              onTap: () =>
-                  ref.read(_activeVariableProvider.notifier).state = v,
+              onTap: () {
+                ref.read(_activeVariableProvider.notifier).state = v;
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
+                margin: const EdgeInsets.only(right: 6),
+                padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 8 : 10, vertical: compact ? 6 : 8),
                 decoration: BoxDecoration(
                   color: isActive ? v.color.withAlpha(38) : Colors.transparent,
                   border: Border.all(
@@ -394,16 +510,14 @@ class _VariableSelector extends StatelessWidget {
                   children: [
                     Icon(v.icon,
                         color: isActive ? v.color : Colors.white38,
-                        size: 16),
+                        size: compact ? 14 : 16),
                     const SizedBox(height: 3),
-                    Text(
-                      v.label,
-                      style: TextStyle(
-                          color: isActive ? v.color : Colors.white38,
-                          fontSize: 7,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8),
-                    ),
+                    Text(v.label,
+                        style: TextStyle(
+                            color: isActive ? v.color : Colors.white38,
+                            fontSize: compact ? 7 : 7,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8)),
                   ],
                 ),
               ),
@@ -415,149 +529,127 @@ class _VariableSelector extends StatelessWidget {
   }
 }
 
-// ─── Time Scrubber ────────────────────────────────────────────────────────────
+class _DomainSelector extends StatelessWidget {
+  final MapDomain activeDomain;
+  final WidgetRef ref;
+  final bool horizontal;
+  const _DomainSelector(
+      {required this.activeDomain,
+      required this.ref,
+      required this.horizontal});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = MapDomain.values.map((d) {
+      final isActive = d == activeDomain;
+      return GestureDetector(
+        onTap: () => ref.read(_activeDomainProvider.notifier).state = d,
+        child: Container(
+          margin: horizontal
+              ? const EdgeInsets.only(right: 6)
+              : const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive
+                ? const Color(0xFF6E8473).withAlpha(51)
+                : Colors.transparent,
+            border: Border.all(
+              color: isActive ? const Color(0xFF6E8473) : Colors.white12,
+              width: isActive ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            d.label,
+            style: TextStyle(
+                color: isActive ? const Color(0xFF6E8473) : Colors.white38,
+                fontSize: 9,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                letterSpacing: 1),
+          ),
+        ),
+      );
+    }).toList();
+
+    return Container(
+      color: Colors.black.withAlpha(178),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: horizontal
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                const Text('MODEL  ',
+                    style: TextStyle(
+                        color: Color(0xFF6E8473),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5)),
+                ...items,
+              ]),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: items),
+    );
+  }
+}
 
 class _TimeScrubber extends StatelessWidget {
-  final int offset;   // hours from now
+  final int offset;
   final WidgetRef ref;
   const _TimeScrubber({required this.offset, required this.ref});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(204),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            Container(
-                width: 3, height: 10, color: const Color(0xFF6E8473)),
-            const SizedBox(width: 8),
-            const Text('FORECAST TIME',
-                style: TextStyle(
-                    color: Color(0xFF6E8473),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5)),
-            const Spacer(),
-            Text(
-              offset == 0
-                  ? 'NOW'
-                  : offset > 0
-                      ? '+${offset}h'
-                      : '${offset}h',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1),
-            ),
-          ]),
-          const SizedBox(height: 6),
-          SliderTheme(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(children: [
+        Container(width: 3, height: 10, color: const Color(0xFF6E8473)),
+        const SizedBox(width: 8),
+        const Text('TIME',
+            style: TextStyle(
+                color: Color(0xFF6E8473),
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: const Color(0xFF6E8473),
               inactiveTrackColor: Colors.white12,
               thumbColor: const Color(0xFF6E8473),
               overlayColor: const Color(0xFF6E8473).withAlpha(40),
               trackHeight: 2,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 6),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             ),
             child: Slider(
               value: offset.toDouble(),
               min: -24,
-              max: 240,   // 10 days forward
-              divisions: 264,
+              max: 240,
+              divisions: 88, // every 3h
               onChanged: (v) {
-                // Snap to nearest 3h to avoid excessive tile requests
                 final snapped = (v / 3).round() * 3;
                 ref.read(_timeOffsetProvider.notifier).state = snapped;
               },
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text('-24h', style: TextStyle(color: Colors.white24, fontSize: 8)),
-              Text('NOW',  style: TextStyle(color: Colors.white38, fontSize: 8)),
-              Text('+10d', style: TextStyle(color: Colors.white24, fontSize: 8)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Opacity Slider ───────────────────────────────────────────────────────────
-
-class _OpacitySlider extends StatelessWidget {
-  final double opacity;
-  final WidgetRef ref;
-  const _OpacitySlider({required this.opacity, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withAlpha(204),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('LAYER',
-              style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1)),
-          const SizedBox(height: 4),
-          RotatedBox(
-            quarterTurns: 3,
-            child: SizedBox(
-              width: 80,
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF6E8473),
-                  inactiveTrackColor: Colors.white12,
-                  thumbColor: const Color(0xFF6E8473),
-                  overlayColor: const Color(0xFF6E8473).withAlpha(40),
-                  trackHeight: 2,
-                  thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 5),
-                ),
-                child: Slider(
-                  value: opacity,
-                  min: 0.1,
-                  max: 1.0,
-                  onChanged: (v) =>
-                      ref.read(_overlayOpacityProvider.notifier).state = v,
-                ),
-              ),
-            ),
-          ),
-          Text(
-            '${(opacity * 100).round()}%',
+        ),
+        SizedBox(
+          width: 48,
+          child: Text(
+            offset == 0
+                ? 'NOW'
+                : offset > 0
+                    ? '+${offset}h'
+                    : '${offset}h',
+            textAlign: TextAlign.right,
             style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 8,
-                fontWeight: FontWeight.w700),
+                color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }
-
-// ─── Map Button ───────────────────────────────────────────────────────────────
 
 class _MapButton extends StatelessWidget {
   final VoidCallback onTap;
