@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'city_search_screen.dart';
+import 'package:weather/ui/screens/city_search_screen.dart';
 
 void main() async {
-  await dotenv.load(fileName: '.env');
   runApp(
     const ProviderScope(
       child: WeatherApp(),
@@ -26,23 +24,23 @@ class WeatherApp extends StatelessWidget {
     const earthyAccent = Color(0xFF8E755E);
 
     final baseText =
-        GoogleFonts.publicSansTextTheme(ThemeData.dark().textTheme).apply(
+        GoogleFonts.jetBrainsMonoTextTheme(ThemeData.dark().textTheme).apply(
       bodyColor: const Color(0xFFE4E7E5),
       displayColor: const Color(0xFFE4E7E5),
     );
 
-    final displayText = GoogleFonts.spectralTextTheme(baseText).copyWith(
-      displayLarge: GoogleFonts.spectral(
+    final displayText = GoogleFonts.jetBrainsMonoTextTheme(baseText).copyWith(
+      displayLarge: GoogleFonts.jetBrainsMono(
         textStyle: baseText.displayLarge,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.6,
       ),
-      displayMedium: GoogleFonts.spectral(
+      displayMedium: GoogleFonts.jetBrainsMono(
         textStyle: baseText.displayMedium,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.4,
       ),
-      displaySmall: GoogleFonts.spectral(
+      displaySmall: GoogleFonts.jetBrainsMono(
         textStyle: baseText.displaySmall,
         fontWeight: FontWeight.w500,
       ),
@@ -73,7 +71,7 @@ class WeatherApp extends StatelessWidget {
           foregroundColor: Color(0xFFE4E7E5),
         ),
         cardTheme: CardThemeData(
-          color: earthyCard.withOpacity(0.6),
+          color: earthyCard.withAlpha(153),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
